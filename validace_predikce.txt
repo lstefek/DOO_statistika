@@ -9,6 +9,8 @@ Skutečnost 2024: 36 188
   Lin    :   40 022  chyba=+10.6%
   Recent :   41 068  chyba=+13.5%
   Holt   :   40 143  chyba=+10.9%
+  HNB ★  :   43 668  CI90=[42 407; 45 034]  chyba=+20.7%  ✗ MIMO CI
+  HNB divergence: 0
 
 ## 2. FARNOSTI — leave-2024-out, celkové metriky
   Exp     :  n=261  MAPE=  44.0%  wMAPE=  25.0%  RMSE=  59.4  bias=+24.4  medAPE=  27.2%  nadhodnoceno= 73.6%
@@ -16,6 +18,8 @@ Skutečnost 2024: 36 188
   Recent  :  n=261  MAPE=  77.6%  wMAPE=  36.5%  RMSE= 160.5  bias=+31.7  medAPE=  30.8%  nadhodnoceno= 58.6%
   Holt    :  n=259  MAPE=  49.0%  wMAPE=  25.6%  RMSE=  61.8  bias=+15.0  medAPE=  25.0%  nadhodnoceno= 62.9%
   Coverage 90% CI exp: 209/274 (76.3 %)
+  HNB ★   :  n=261  MAPE=  42.2%  wMAPE=  25.4%  RMSE=  60.4  bias=+28.2  medAPE=  27.3%  nadhodnoceno= 75.9%
+  Coverage 90% CI HNB: 163/277 (58.8 %)
 
 ## 3. FARNOSTI — segmentované metriky (exp model, leave-2024-out)
   Validní predikce (validni=1):
@@ -70,21 +74,15 @@ Ostrava           4432    5544  +25.1%    5410  +22.1%    5799  +30.9%    5419  
   2027  fallback_last_known              88       6 638
   2027  fallback_zero                    12           0
   2027  model_valid                     177      28 702
-  2029  fallback_last_known              88       6 638
-  2029  fallback_zero                    12           0
-  2029  model_valid                     177      27 062
+  2029  hnb                             277      35 158
   2031  fallback_last_known              88       6 638
   2031  fallback_zero                    12           0
   2031  model_valid                     177      25 530
-  2034  fallback_last_known              88       6 638
-  2034  fallback_zero                    12           0
-  2034  model_valid                     177      23 417
+  2034  hnb                             277      31 236
   2037  fallback_last_known              88       6 638
   2037  fallback_zero                    12           0
   2037  model_valid                     177      21 505
-  2039  fallback_last_known              88       6 638
-  2039  fallback_zero                    12           0
-  2039  model_valid                     177      20 332
+  2039  hnb                             277      27 868
 
   Akceptační kritérium — invalid_used_as_valid = 0 (OK)
 

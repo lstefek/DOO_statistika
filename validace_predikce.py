@@ -13,6 +13,7 @@ Výstup: validace_predikce.txt
 
 import math
 import sqlite3
+import warnings
 from pathlib import Path
 
 import numpy as np
@@ -202,6 +203,110 @@ def validace_dieceze(conn, train_roky: list[int], holdout_rok: int) -> dict:
     return out
 
 
+# ── HNB holdout ───────────────────────────────────────────────────────────────
+
+def fituj_hnb_holdout(conn, train_roky: list[int], holdout_rok: int) -> dict:
+    """
+    Fituje HNB model na train_roky (bez holdout_rok) a predikuje holdout_rok.
+    Vrátí dict s klíči: dieceze=(val,lo,hi), farnosti={farnost:(val,lo,hi)},
+    divergence, n_far, n_dek.
+    """
+    warnings.filterwarnings("ignore")
+
+    rows = conn.execute(
+        "SELECT farnost, dekanat, rok, osob_celkem FROM scitani "
+        "WHERE rok IN ({}) ORDER BY farnost, rok".format(
+            ",".join(str(r) for r in train_roky)
+        )
+    ).fetchall()
+
+    farnosti = sorted(set(r[0] for r in rows))
+    dekanaty = sorted(set(r[1] for r in rows))
+    far_idx  = {f: i for i, f in enumerate(farnosti)}
+    dek_idx  = {d: i for i, d in enumerate(dekanaty)}
+    far_to_dek: dict = {}
+    for f, d, r, v in rows:
+        far_to_dek[f] = d
+
+    obs_far, obs_t, obs_y = [], [], []
+    for f, d, rok, val in rows:
+        if val is not None:
+            obs_far.append(far_idx[f])
+            obs_t.append(float(rok - 1999))
+            obs_y.append(int(val))
+
+    obs_far = np.array(obs_far, dtype=int)
+    obs_t   = np.array(obs_t,   dtype=float)
+    obs_y   = np.array(obs_y,   dtype=int)
+    far_dek = np.array([dek_idx[far_to_dek[f]] for f in farnosti], dtype=int)
+
+    import pymc as pm
+
+    n_far = len(farnosti)
+    nonzero = obs_y[obs_y > 0]
+    global_log_mean = float(np.log(nonzero.mean())) if len(nonzero) else 4.0
+
+    print(f"\nHNB holdout — trénink {train_roky} → predikce {holdout_rok}")
+    print(f"  {n_far} farností, {len(dekanaty)} děkanátů, {len(obs_y)} pozorování")
+
+    coords = {"farnost": farnosti, "dekanat": dekanaty}
+    with pm.Model(coords=coords) as _:
+        mu_a        = pm.Normal("mu_a",        mu=global_log_mean, sigma=1.0)
+        sigma_a_dek = pm.HalfNormal("sigma_a_dek", sigma=0.5)
+        mu_b        = pm.Normal("mu_b",        mu=-0.028, sigma=0.02)
+        sigma_b_dek = pm.HalfNormal("sigma_b_dek", sigma=0.01)
+        a_dek_z     = pm.Normal("a_dek_z", 0.0, 1.0, dims="dekanat")
+        b_dek_z     = pm.Normal("b_dek_z", 0.0, 1.0, dims="dekanat")
+        a_dek       = pm.Deterministic("a_dek", mu_a + sigma_a_dek * a_dek_z, dims="dekanat")
+        b_dek       = pm.Deterministic("b_dek", mu_b + sigma_b_dek * b_dek_z, dims="dekanat")
+        sigma_a_par = pm.HalfNormal("sigma_a_par", sigma=0.5)
+        sigma_b_par = pm.HalfNormal("sigma_b_par", sigma=0.01)
+        a_par_z     = pm.Normal("a_par_z", 0.0, 1.0, dims="farnost")
+        b_par_z     = pm.Normal("b_par_z", 0.0, 1.0, dims="farnost")
+        a_par = pm.Deterministic(
+            "a_par", a_dek[far_dek] + sigma_a_par * a_par_z, dims="farnost")
+        b_par = pm.Deterministic(
+            "b_par", b_dek[far_dek] + sigma_b_par * b_par_z, dims="farnost")
+        alpha_nb = pm.HalfNormal("alpha_nb", sigma=10)
+        log_mu = a_par[obs_far] + b_par[obs_far] * obs_t
+        pm.NegativeBinomial("y_obs",
+                            mu=pm.math.exp(log_mu),
+                            alpha=alpha_nb, observed=obs_y)
+        trace = pm.sample(
+            draws=500, tune=1000, chains=2,
+            target_accept=0.90, random_seed=42,
+            progressbar=True, return_inferencedata=True,
+        )
+
+    divs   = int(trace.sample_stats["diverging"].values.sum())
+    t_pred = float(holdout_rok - 1999)
+    post   = trace.posterior
+    a_smp  = post["a_par"].values.reshape(-1, n_far)
+    b_smp  = post["b_par"].values.reshape(-1, n_far)
+    mu_smp = np.exp(a_smp + b_smp * t_pred)   # (S, n_far)
+
+    val = np.round(mu_smp.mean(axis=0)).astype(int)
+    lo  = np.maximum(0, np.percentile(mu_smp, 5,  axis=0)).astype(int)
+    hi  = np.percentile(mu_smp, 95, axis=0).astype(int)
+    pred_far = {f: (int(val[i]), int(lo[i]), int(hi[i])) for i, f in enumerate(farnosti)}
+
+    mu_di    = mu_smp.sum(axis=1)
+    diec_val = int(round(mu_di.mean()))
+    diec_lo  = int(max(0, np.percentile(mu_di, 5)))
+    diec_hi  = int(np.percentile(mu_di, 95))
+
+    print(f"  Divergence: {divs}  |  Diecéze {holdout_rok}: {diec_val:,} "
+          f"[{diec_lo:,} – {diec_hi:,}]".replace(",", " "))
+
+    return {
+        "dieceze":    (diec_val, diec_lo, diec_hi),
+        "farnosti":   pred_far,
+        "divergence": divs,
+        "n_far":      n_far,
+        "n_dek":      len(dekanaty),
+    }
+
+
 # ── hlavní výstup ─────────────────────────────────────────────────────────────
 
 def main() -> None:
@@ -216,6 +321,9 @@ def main() -> None:
     TRAIN   = [r for r in ROKY_HISTORICKE if r != HOLDOUT]
 
     h(f"=== Leave-{HOLDOUT}-out validace predikčního modelu — verze 3 ==="); nl()
+
+    # HNB holdout (spouští PyMC sampling ~8 min)
+    hnb_res = fituj_hnb_holdout(conn, TRAIN, HOLDOUT)
 
     # Diecéze
     diec = validace_dieceze(conn, TRAIN, HOLDOUT)
@@ -235,6 +343,14 @@ def main() -> None:
         h(f"  Recent : {diec['recent']:>8,.0f}  chyba={diec['recent_chyba_pct']:+.1f}%".replace(",", " "))
     if "holt" in diec:
         h(f"  Holt   : {diec['holt']:>8,.0f}  chyba={diec['holt_chyba_pct']:+.1f}%".replace(",", " "))
+    if hnb_res:
+        hnb_v, hnb_lo, hnb_hi = hnb_res["dieceze"]
+        sk = diec["skutecnost"]
+        hnb_chyba = (hnb_v - sk) / sk * 100
+        chk_hnb = "✓ v CI" if hnb_lo <= sk <= hnb_hi else "✗ MIMO CI"
+        h(f"  HNB ★  : {hnb_v:>8,}  CI90=[{hnb_lo:,}; {hnb_hi:,}]  "
+          f"chyba={hnb_chyba:+.1f}%  {chk_hnb}".replace(",", " "))
+        h(f"  HNB divergence: {hnb_res['divergence']}")
     nl()
 
     # Farnosti — leave-2024-out
@@ -251,10 +367,21 @@ def main() -> None:
     lo_arr = [p_lo.get(f) for f in common]
     hi_arr = [p_hi.get(f) for f in common]
 
+    # HNB farnostní predikce (všechny farnosti — i ty bez exp fitu)
+    hnb_far = hnb_res["farnosti"] if hnb_res else {}
+    common_hnb = sorted(set(hnb_far) & set(skut))
+    s_hnb  = [skut[f] for f in common_hnb]
+    v_hnb  = [hnb_far[f][0] for f in common_hnb]
+    lo_hnb = [hnb_far[f][1] for f in common_hnb]
+    hi_hnb = [hnb_far[f][2] for f in common_hnb]
+
     h("## 2. FARNOSTI — leave-2024-out, celkové metriky")
     for name, arr in (("Exp", e_arr), ("Lin", l_arr), ("Recent", r_arr), ("Holt", h_arr)):
         h(f"  {name:<8}:" + fmt_metrics(metrics(s_arr, arr)))
     h(f"  Coverage 90% CI exp: {coverage(s_arr, lo_arr, hi_arr)}")
+    if hnb_res:
+        h(f"  HNB ★   :" + fmt_metrics(metrics(s_hnb, v_hnb)))
+        h(f"  Coverage 90% CI HNB: {coverage(s_hnb, lo_hnb, hi_hnb)}")
     nl()
 
     # Segmentované metriky

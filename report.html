@@ -285,21 +285,24 @@
     <tr><th>Model</th><th class="num">Predikce 2024</th><th class="num">Skutečnost</th><th class="num">Chyba</th><th class="num">90 % CI</th></tr>
   </thead>
   <tbody>
-    <tr><td>Exp</td>    <td class="num">42 220</td><td class="num">36 188</td><td class="num red">+16,7 %</td><td class="num">40 330 – 44 200 (✗ mimo)</td></tr>
+    <tr><td>Exp</td>    <td class="num">42 220</td><td class="num">36 188</td><td class="num red">+16,7 %</td><td class="num">38 395 – 46 427 (✗ mimo)</td></tr>
     <tr><td>Lin</td>    <td class="num">40 022</td><td class="num">36 188</td><td class="num ora">+10,6 %</td><td class="num">—</td></tr>
     <tr><td>Recent (2)</td><td class="num">41 068</td><td class="num">36 188</td><td class="num ora">+13,5 %</td><td class="num">—</td></tr>
     <tr><td>Holt</td>   <td class="num">40 143</td><td class="num">36 188</td><td class="num ora">+10,9 %</td><td class="num">—</td></tr>
+    <tr><td><strong>HNB ★</strong></td><td class="num"><strong>43 668</strong></td><td class="num">36 188</td><td class="num red"><strong>+20,7 %</strong></td><td class="num">42 407 – 45 034 (✗ mimo)</td></tr>
   </tbody>
 </table>
 
 <div class="box danger">
   <strong>Klíčové zjištění validace</strong>
-  Všechny čtyři modely <strong>přestřelují skutečnost</strong> v roce 2024 o 11–17 %. To znamená: pozorovaný pokles je <em>rychlejší</em>, než modely fittnuté na 1999–2019 dokázaly extrapolovat. Opravený 90 % CI (OLS predikční interval s faktorem extrapolace) skutečnou hodnotu na diecézní úrovni pořád nepokrývá — strukturální zrychlení poklesu po roce 2019 je mimo rozsah parametrické nejistoty.
+  Všech pět modelů <strong>přestřeluje skutečnost</strong> v roce 2024 o 11–21 %. Pozorovaný pokles je <em>rychlejší</em>, než modely fittnuté na 1999–2019 dokázaly extrapolovat — zrychlení poklesu po roce 2019 je strukturální a nelze je zachytit parametrickou nejistotou.
   <br><br>
-  <strong>Důsledek pro prognózu 2039:</strong> Bodové predikce (zejména exp) mohou být <em>příliš optimistické</em> — skutečnost bude pravděpodobně někde mezi lin/Holt (≈ 17 000) a HNB (≈ 28 000); HNB regularizuje dolů extrémní pokles u malých farností. CI slouží jako indikátor parametrické nejistoty, ne jako garance pokrytí.
+  HNB ★ má <strong>nejvyšší chybu na diecézní úrovni (+20,7 %)</strong>, ale <strong>nejlepší MAPE na úrovni farností (42,2 %)</strong>. Důvod: partial pooling smršťuje farnosti k děkanátskému průměru — extrémní pokles malých farností je tlumený, takže součet přes diecézi je vyšší. CI modelu HNB 90 % HDI má coverage 59 % (horší než exp CI 76 %), protože posteriorní nejistota v μ nezahrnuje nepozorované strukturální zrychlení poklesu.
+  <br><br>
+  <strong>Důsledek pro prognózu 2039:</strong> Všechny modely pravděpodobně přeceňují budoucí návštěvnost. HNB používáme jako centrální model pro kapacitní analýzu proto, že nejlépe zachycuje heterogenitu farností — ne proto, že má nejnižší agregátní chybu. CI slouží jako indikátor parametrické nejistoty, ne jako garance pokrytí.
 </div>
 
-<p>Na úrovni farností je MAPE pro exp model 44,0 %, vážený MAPE 25,0 %, RMSE 59. Coverage 90 % CI: <strong>76 %</strong>. Pro horizont 2039 (15 let) lze chybu očekávat ještě vyšší.</p>
+<p>Na úrovni farností (leave-2024-out): MAPE exp 44,0 %, HNB 42,2 %; wMAPE exp 25,0 %, HNB 25,4 %; RMSE exp 59, HNB 60. Coverage 90 % CI: exp <strong>76 %</strong>, HNB <strong>59 %</strong>. Pro horizont 2039 (15 let) lze chybu očekávat výrazně vyšší.</p>
 
 <table>
   <thead>
