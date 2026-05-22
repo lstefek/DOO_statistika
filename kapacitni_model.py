@@ -83,22 +83,28 @@ def knezi_v_roce(knezi_2024: int, pokles_b: float, rok: int) -> int:
     return max(1, round(knezi_2024 * math.exp(pokles_b * t)))
 
 
-def vericich_v_roce(conn: sqlite3.Connection, rok: int) -> dict[str, float]:
+FALLBACK_NEVALIDNI = "last_known"  # konzervativní fallback pro validni=0
+
+
+def vericich_v_roce(
+    conn: sqlite3.Connection, rok: int
+) -> dict[str, tuple[float, str, int]]:
     """
-    Vrátí {farnost: počet věřících} pro libovolný rok.
-    - rok ≤ 2024: skutečnost z scitani (NULL → 0)
-    - rok > 2024: vyhodnocení exp modelu z predikce_farnost_model přímo
-      (a·exp(b·t)). Pokud farnost nemá platný model, použije se poslední
-      známá hodnota (0 pokud žádná).
-    Zaručuje pokrytí všech 277 farností.
+    Vrátí {farnost: (vericich, zdroj, predikce_validni)} pro libovolný rok.
+
+    zdroj:
+      'actual'              — historická skutečnost z scitani
+      'model_valid'         — validní exp model (validni=1)
+      'fallback_last_known' — nevalidní model, použita poslední kladná hodnota
+      'fallback_zero'       — nevalidní model a poslední hodnota = 0 nebo žádná data
+
+    Nula v historii = skutečná nulová účast (není totožná s chybějící hodnotou).
     """
     cur = conn.cursor()
-    # Vždy začneme se seznamem všech farností
     all_far = [r[0] for r in cur.execute("SELECT DISTINCT farnost FROM scitani").fetchall()]
-    out: dict[str, float] = {f: 0.0 for f in all_far}
+    out: dict[str, tuple[float, str, int]] = {f: (0.0, "fallback_zero", 0) for f in all_far}
 
     if rok <= REFERENCNI_ROK:
-        # Nejbližší rok, kde jsou data
         roky_data = [r[0] for r in cur.execute(
             "SELECT DISTINCT rok FROM scitani WHERE rok<=? ORDER BY rok DESC", (rok,)
         ).fetchall()]
@@ -109,28 +115,39 @@ def vericich_v_roce(conn: sqlite3.Connection, rok: int) -> dict[str, float]:
                 (zk_rok,),
             ).fetchall()
             for f, v in rows:
-                out[f] = v
+                out[f] = (float(v), "actual", 1)
         return out
 
-    # Pro budoucí rok: vyhodnotit exp model přímo
-    t = rok - 1999  # předikce model fituje proti (rok-1999)
+    # Pro budoucí rok: vyhodnotit exp model pouze pro platné predikce
+    t = rok - 1999
     rows = cur.execute(
-        "SELECT farnost, exp_a, exp_b, validni FROM predikce_farnost_model"
+        "SELECT farnost, exp_a, exp_b, validni, last_value FROM predikce_farnost_model"
     ).fetchall()
-    for f, a, b, validni in rows:
-        if a is not None and b is not None:
+    for f, a, b, validni, last_val in rows:
+        if validni == 1 and a is not None and b is not None:
             val = max(0.0, a * math.exp(b * t))
-            out[f] = val
+            out[f] = (val, "model_valid", 1)
         else:
-            # Fallback: poslední známá hodnota
-            row = cur.execute(
-                "SELECT osob_celkem FROM scitani "
-                "WHERE farnost=? AND osob_celkem IS NOT NULL "
-                "ORDER BY rok DESC LIMIT 1",
-                (f,),
-            ).fetchone()
-            out[f] = (row[0] or 0) if row else 0
+            # Fallback last_known: poslední zaznamenaná hodnota (nula je platná)
+            if last_val is None or last_val == 0:
+                out[f] = (0.0, "fallback_zero", 0)
+            else:
+                out[f] = (float(last_val), "fallback_last_known", 0)
     return out
+
+
+def largest_remainder(total: int, weights: dict[str, float]) -> dict[str, int]:
+    """Apportionment metodou největšího zbytku — součet výsledku je přesně total."""
+    sum_w = sum(weights.values())
+    if sum_w == 0 or total == 0:
+        return {k: 0 for k in weights}
+    quotas = {k: total * v / sum_w for k, v in weights.items()}
+    floors = {k: int(q) for k, q in quotas.items()}
+    remainder = total - sum(floors.values())
+    by_frac = sorted(quotas.keys(), key=lambda k: -(quotas[k] - floors[k]))
+    for k in by_frac[:remainder]:
+        floors[k] += 1
+    return floors
 
 
 def dekanat_farnosti(conn: sqlite3.Connection) -> dict[str, str]:
@@ -141,15 +158,14 @@ def dekanat_farnosti(conn: sqlite3.Connection) -> dict[str, str]:
 def prideleni_knezi_dekanaty(
     conn: sqlite3.Connection,
     pocet_knezi: int,
+    rok: int = REFERENCNI_ROK,
 ) -> dict[str, int]:
     """
-    Rozdělí celkový počet kněží mezi děkanáty podle DNEŠNÍHO podílu
-    kněží v daném děkanátu (z tabulky knezi). Předpoklad: poměry mezi
-    děkanáty zůstávají stabilní (pokles je rovnoměrný).
+    Rozdělí celkový počet kněží mezi děkanáty pomocí metody největšího zbytku.
+    Váhy jsou vždy skutečné počty kněží po děkanátech z DB (kněz-děkanát páry).
 
-    Tento přístup je realističtější než rovnoměrné rozdělení podle počtu
-    farností — některé děkanáty mají 1,3 farnosti/kněz (Frýdek), jiné
-    3,7 farnosti/kněz (Bruntál).
+    Pro rok == REFERENCNI_ROK je výsledek přímo odvozen z DB distribuce,
+    nikoli ručně zapsaných čísel. Pro budoucí roky zachovává stejné relativní váhy.
     """
     cur = conn.cursor()
     rows = cur.execute("""
@@ -165,26 +181,16 @@ def prideleni_knezi_dekanaty(
                            'Rektor kostela duchovní správy')
         GROUP BY s.dekanat
     """).fetchall()
-    total = sum(c or 0 for _, c in rows)
-    if total == 0:
+    weights = {dek: float(c or 0) for dek, c in rows}
+
+    if sum(weights.values()) == 0:
         # Fallback: rovnoměrné rozdělení podle farností
         rows2 = cur.execute(
             "SELECT dekanat, COUNT(DISTINCT farnost) FROM scitani GROUP BY dekanat"
         ).fetchall()
-        total = sum(c for _, c in rows2)
-        rows = rows2
+        weights = {dek: float(c) for dek, c in rows2}
 
-    out: dict[str, int] = {}
-    rem = pocet_knezi
-    sorted_rows = sorted(rows, key=lambda x: -(x[1] or 0))
-    for i, (dek, count) in enumerate(sorted_rows):
-        if i == len(sorted_rows) - 1:
-            out[dek] = max(1, rem)
-        else:
-            n = max(1, round(pocet_knezi * (count or 0) / total))
-            out[dek] = n
-            rem -= n
-    return out
+    return largest_remainder(pocet_knezi, weights)
 
 
 def simuluj_pokryti_geo(
@@ -239,8 +245,9 @@ def vypocti_scenare(conn, knezi_2024: int) -> dict:
             results[key] = []
             for rok in ROKY_MODELU:
                 pocet_k = knezi_v_roce(knezi_2024, b, rok)
-                ver = vericich_v_roce(conn, rok)
-                knezi_po_dek = prideleni_knezi_dekanaty(conn, pocet_k)
+                ver_full = vericich_v_roce(conn, rok)  # {f: (val, zdroj, pred_v)}
+                ver = {f: t[0] for f, t in ver_full.items()}  # {f: val}
+                knezi_po_dek = prideleni_knezi_dekanaty(conn, pocet_k, rok)
                 stav = simuluj_pokryti_geo(ver, dek_far, knezi_po_dek, mfk)
 
                 pokryte  = sum(1 for s in stav.values() if s == "pokryta")
@@ -252,7 +259,8 @@ def vypocti_scenare(conn, knezi_2024: int) -> dict:
                     "rok": rok, "knezi": pocet_k, "kapacita": pocet_k * mfk,
                     "pokryte": pokryte, "ohrozene": ohrozene,
                     "ver_p": ver_p, "ver_o": ver_o,
-                    "stav": stav, "ver": ver, "knezi_po_dek": knezi_po_dek,
+                    "stav": stav, "ver": ver, "ver_full": ver_full,
+                    "knezi_po_dek": knezi_po_dek,
                 })
     return results
 
@@ -262,28 +270,30 @@ def uloz_main_scenar(conn, results, scenar_nazev=("base", 2)) -> None:
     conn.execute("DROP TABLE IF EXISTS kapacitni_model")
     conn.execute("""
         CREATE TABLE kapacitni_model (
-            rok          INTEGER NOT NULL,
-            farnost      TEXT    NOT NULL,
-            dekanat      TEXT,
-            vericich     REAL,
-            pocet_knezi  INTEGER,
-            kapacita     INTEGER,
-            stav         TEXT,
-            scenar       TEXT,
-            max_far_knez INTEGER,
+            rok              INTEGER NOT NULL,
+            farnost          TEXT    NOT NULL,
+            dekanat          TEXT,
+            vericich         REAL,
+            pocet_knezi      INTEGER,
+            kapacita         INTEGER,
+            stav             TEXT,
+            scenar           TEXT,
+            max_far_knez     INTEGER,
+            vericich_zdroj   TEXT,
+            predikce_validni INTEGER,
             PRIMARY KEY (rok, farnost)
         )
     """)
     dek_far = dekanat_farnosti(conn)
     pokles_label, mfk = scenar_nazev
     for entry in results[(pokles_label, mfk)]:
-        for far, v in entry["ver"].items():
+        for far, (val, zdroj, pred_v) in entry["ver_full"].items():
             conn.execute(
-                "INSERT INTO kapacitni_model VALUES (?,?,?,?,?,?,?,?,?)",
+                "INSERT INTO kapacitni_model VALUES (?,?,?,?,?,?,?,?,?,?,?)",
                 (entry["rok"], far, dek_far.get(far),
-                 v, entry["knezi"], entry["kapacita"],
+                 val, entry["knezi"], entry["kapacita"],
                  entry["stav"].get(far, "neznámá"),
-                 pokles_label, mfk),
+                 pokles_label, mfk, zdroj, pred_v),
             )
     conn.commit()
 
