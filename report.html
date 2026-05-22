@@ -110,19 +110,6 @@
   </ol>
 </div>
 
-<div class="changelog">
-  <strong>Verze 2 — co se změnilo oproti první analýze</strong>
-  <ul>
-    <li>NULL hodnoty ve sčítání už nejsou mapovány na 0 — 100 farností s neúplnými řadami má nyní explicitně neplatnou predikci (flag <code>validni=0</code>).</li>
-    <li>R² pro exp. model počítáme v log prostoru (konzistentně s OLS fitem).</li>
-    <li>Přidán 90 % predikční interval (CI) a třetí model „Recent" (lokální tempo z posledních 2 bodů).</li>
-    <li>Provedena leave-2024-out validace: exp model na diecézi přestřeluje o +16,7 %. <strong>Skutečný pokles akceleruje rychleji než exp model předpokládá</strong> — viz sekce 5.</li>
-    <li>Počet kněží 186 nyní odvozen z databáze (dříve hardcoded 192/198). Geografický kapacitní model — kapacita kněží alokovaná po děkanátech.</li>
-    <li>Citlivostní analýza pro 3 scénáře poklesu kněží × 3 limity farností/kněz.</li>
-    <li>Hodnota Lubina 2014 je ponechána podle zdrojového CSV: 238 osob, muž/žena 110/128.</li>
-  </ul>
-</div>
-
 <!-- ═══════════════════════════════════════════════════════════ -->
 <h2 id="vstupy">1. Datové zdroje a vstupy</h2>
 
@@ -482,6 +469,7 @@
 <footer>
   <p>Zpracováno pomocí Claude Code (Anthropic) · květen 2026 · verze 2 (po validačním reportu)</p>
   <p>Databáze: <code>scitani.db</code> · Grafy: <code>grafy/</code> · Skripty: <code>import_csv_to_sqlite.py</code>, <code>scrape_knezi.py</code>, <code>predikce.py</code>, <code>kapacitni_model.py</code>, <code>validace_predikce.py</code>, <code>grafy.py</code>, <code>mapa_ohrozenych.py</code></p>
+  <p><a href="report_v1_v2.html">Verze 2 — co se změnilo oproti první analýze</a></p>
 </footer>
 
 </body>
