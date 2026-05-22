@@ -150,9 +150,9 @@
 </ul>
 <p>Z 277 farností je <strong>177 platných predikcí (64 %)</strong> a 100 neplatných. Neplatné nelze pro plánování použít — typicky malé farnosti s nesouvislými řadami (Býkov, Travná, Zálesí, atd.).</p>
 
-<p>Kromě bodové predikce model počítá <strong>90 % predikční interval</strong> metodou OLS: <code>t<sub>n−2, 0,95</sub> · σ · √(1 + 1/n + (t*−t̄)²/S<sub>xx</sub>)</code>. Faktor extrapolace <code>(t*−t̄)²/S<sub>xx</sub></code> zajišťuje, že interval se rozšiřuje s rostoucím horizontem. Leave-2024-out validace ukázala coverage <strong>76 %</strong> (dříve 45 % před opravou). Zbývající deficit oproti 90 % odráží strukturální zrychlení poklesu po roce 2019, které nelze zachytit parametrickou nejistotou.</p>
+<p>Kromě bodové predikce model počítá <strong>90 % predikční interval</strong> metodou OLS: <code>t<sub>n−2, 0,95</sub> · σ · √(1 + 1/n + (t*−t̄)²/S<sub>xx</sub>)</code>. Faktor extrapolace <code>(t*−t̄)²/S<sub>xx</sub></code> zajišťuje, že interval se rozšiřuje s rostoucím horizontem. Leave-2024-out validace ukázala coverage <strong>76 %</strong>. Zbývající deficit oproti 90 % odráží strukturální zrychlení poklesu po roce 2019, které nelze zachytit parametrickou nejistotou.</p>
 
-<p><strong>Zacházení s nulami (v3):</strong> hodnota <code>osob_celkem = 0</code> ve zdrojových datech je interpretována jako <em>skutečná nulová účast</em>, nikoli jako chybějící záznam. Exp model fituje pouze kladné body (<code>y &gt; 0</code>) — nuly do fitu nevstupují, ale jsou uchovány jako metadata (<code>zero_count</code>, <code>last_value</code>). Farnost s poslední hodnotou 0 a neplatným modelem dostane v kapacitním modelu fallback <em>fallback_zero</em>.</p>
+<p><strong>Zacházení s nulami:</strong> hodnota <code>osob_celkem = 0</code> ve zdrojových datech je interpretována jako <em>skutečná nulová účast</em>, nikoli jako chybějící záznam. Exp model fituje pouze kladné body (<code>y &gt; 0</code>) — nuly do fitu nevstupují, ale jsou uchovány jako metadata (<code>zero_count</code>, <code>last_value</code>). Farnost s poslední hodnotou 0 a neplatným modelem dostane v kapacitním modelu fallback <em>fallback_zero</em>.</p>
 
 <h3>2.2 Kapacitní model</h3>
 <p>Model kombinuje projektovaný počet kněží s počtem farností a odhaduje, které farnosti ztratí pravidelnou pastorální péči. Klíčové parametry:</p>
@@ -162,7 +162,7 @@
   <li><strong>Max. farností na kněze</strong>: 3 scénáře (2, 3, 4).</li>
   <li><strong>Geografické přidělování</strong>: kapacita kněží se rozdělí mezi děkanáty podle dnešního stavu, pokrytí se počítá v rámci děkanátu (kněz z Frýdku nemůže sloužit v Jeseníku).</li>
 </ul>
-<p>V rámci děkanátu jsou farnosti přidělovány podle velikosti — nejprve největší. <strong>Verze 3:</strong> kapacita kněží se rozděluje metodou největšího zbytku (přesný celkový součet). Platné farnostní predikce (<code>validni=1</code>) používají exp model; neplatné (<code>validni=0</code>) dostávají fallback <em>last_known</em> nebo <em>fallback_zero</em> — ve výsledcích označeno sloupcem <code>vericich_zdroj</code>.</p>
+<p>V rámci děkanátu jsou farnosti přidělovány podle velikosti — nejprve největší. Kapacita kněží se rozděluje metodou největšího zbytku (přesný celkový součet). Predikce věřících pocházejí z HNB modelu pro všechny farnosti; výsledky jsou označeny sloupcem <code>vericich_zdroj</code>.</p>
 
 <div class="box info">
   <strong>Limitace modelu</strong>
@@ -299,7 +299,7 @@
   <strong>Důsledek pro prognózu 2039:</strong> Bodové predikce (zejména exp) mohou být <em>příliš optimistické</em> — skutečnost bude pravděpodobně někde mezi lin/Holt (≈ 17 000) a HNB (≈ 28 000); HNB regularizuje dolů extrémní pokles u malých farností. CI slouží jako indikátor parametrické nejistoty, ne jako garance pokrytí.
 </div>
 
-<p>Na úrovni farností je MAPE pro exp model 44,0 %, vážený MAPE 25,0 %, RMSE 59. Coverage 90 % CI po opravě OLS intervalu: <strong>76 %</strong> (dříve 45 %). Pro horizont 2039 (15 let) lze chybu očekávat ještě vyšší.</p>
+<p>Na úrovni farností je MAPE pro exp model 44,0 %, vážený MAPE 25,0 %, RMSE 59. Coverage 90 % CI: <strong>76 %</strong>. Pro horizont 2039 (15 let) lze chybu očekávat ještě vyšší.</p>
 
 <table>
   <thead>
@@ -314,7 +314,7 @@
     <tr><td>Velikost 2024 = 1–29</td>    <td class="num">76</td><td class="num red">65,2 %</td><td class="num red">55,0 %</td><td class="num">+5,5</td><td class="num">82 %</td></tr>
   </tbody>
 </table>
-<p><em>Poznámka: nevalidní predikce mají téměř 2× horší chybu než validní. V kapacitním modelu v3 se nevalidní farnosti počítají přes fallback (last_known/fallback_zero), ne přes exp model.</em></p>
+<p><em>Poznámka: nevalidní predikce mají téměř 2× horší chybu než validní. Kapacitní model používá HNB pro všechny farnosti — i ty s nevalidním OLS modelem.</em></p>
 
 <!-- ═══════════════════════════════════════════════════════════ -->
 <h2 id="knezi">6. Kněží v diecézi</h2>
@@ -494,7 +494,7 @@
 <p>Lubina patří v děkanátu Nový Jičín mezi <strong>nadprůměrně stabilní</strong> (−28 % za 25 let oproti průměru −52 %). Vážený průměrný věk 38,9 let v 2024 patří k nejnižším v děkanátu. Kapacitní model ukazuje, že Lubina zůstává pokryta ve všech scénářích — důsledek vyšší aktivity, ne jen velikosti.</p>
 
 <footer>
-  <p>Zpracováno pomocí Claude Code (Anthropic) · květen 2026 · verze 3 (metodické opravy: validní predikce, nuly, coverage, alokace kněží)</p>
+  <p>Zpracováno pomocí Claude Code (Anthropic) · květen 2026 · verze 3</p>
   <p>Databáze: <code>scitani.db</code> · Grafy: <code>grafy/</code> · Skripty: <code>import_csv_to_sqlite.py</code>, <code>scrape_knezi.py</code>, <code>predikce.py</code>, <code>kapacitni_model.py</code>, <code>validace_predikce.py</code>, <code>grafy.py</code>, <code>mapa_ohrozenych.py</code></p>
   <p><a href="report_changelog.html">Changelog verzí (v1 → v2 → v3)</a></p>
 </footer>
