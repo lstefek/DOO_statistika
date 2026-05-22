@@ -133,13 +133,14 @@
 <!-- ═══════════════════════════════════════════════════════════ -->
 <h2 id="metodika">2. Metodika analýzy</h2>
 
-<h3>2.1 Regresní modely predikce</h3>
-<p>Pro každou entitu (farnost, děkanát, diecéze) jsou fitovány čtyři modely na historických datech 1999–2024:</p>
+<h3>2.1 Predikční modely</h3>
+<p>Pro každou entitu (farnost, děkanát, diecéze) jsou fitovány modely na historických datech 1999–2024. <strong>Centrálním modelem</strong> pro kapacitní analýzu je hierarchický NB model (HNB). Ostatní modely slouží jako referenční srovnání.</p>
 <ul>
   <li><strong>Exponenciální pokles</strong> — <code>y = a · e<sup>b·t</sup></code>, OLS na log(y) (pouze body y &gt; 0). Demograficky přirozený model konstantního relativního tempa.</li>
   <li><strong>Lineární regrese</strong> — <code>y = a + b·t</code>. Pro delší horizont vede k záporným hodnotám (clipované na 0).</li>
   <li><strong>Recent (lokální tempo)</strong> — exp model fitnutý jen z posledních dvou bodů (2019, 2024). Reaguje na akceleraci posledních let.</li>
   <li><strong>Holt (tlumené exponenciální vyrovnání)</strong> — Holtovo dvouparametrické vyrovnání s tlumeným trendem (<code>damped_trend=True</code>, optimalizováno přes MLE). Adaptivní váhování historických dat; tlumení zabraňuje přílišné extrapolaci. V leave-2024-out validaci dosahuje podobné přesnosti jako lin model (wMAPE ≈ 26 %).</li>
+  <li><strong>HNB ★ — Hierarchický negativně binomický model (centrální)</strong> — tříúrovňová hierarchie (diecéze → děkanát → farnost) s partial pooling. Intercept a slope každé farnosti jsou sdíleny přes děkanát; malé a extrémní farnosti se smrskují ke skupinovému průměru. NB rozdělení přirozeně zachycuje přesčasovou variabilitu i nulové hodnoty bez fallbacku. Posterior HDI je vypočítán z 1 000 NUTS vzorků (2 chains × 500 draws). Oproti OLS modelům: vyšší predikce (regularizace brání extrémnímu poklesu u malých farností), kapacitní model používá HNB pro všech 277 farností.</li>
 </ul>
 
 <p><strong>Validita predikce</strong>: predikce je označena za neplatnou (<code>validni = 0</code>), pokud:</p>
@@ -251,14 +252,16 @@
       <th class="num">Lin model</th>
       <th class="num">Recent (lokální)</th>
       <th class="num">Holt (tlumený)</th>
+      <th class="num"><strong>HNB ★</strong></th>
+      <th class="num">90 % HDI HNB</th>
     </tr>
   </thead>
   <tbody>
-    <tr><td>1999</td><td class="num">73 266</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>
-    <tr><td>2024</td><td class="num">36 188</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>
-    <tr><td>2029</td><td class="num">—</td><td class="num">33 971</td><td class="num">28 657 – 40 271</td><td class="num">30 696</td><td class="num">28 122</td><td class="num">30 904</td></tr>
-    <tr><td>2034</td><td class="num">—</td><td class="num">29 633</td><td class="num">24 510 – 35 827</td><td class="num">23 378</td><td class="num">21 853</td><td class="num">23 950</td></tr>
-    <tr><td>2039</td><td class="num">—</td><td class="num">25 848</td><td class="num">20 913 – 31 948</td><td class="num">16 061</td><td class="num">16 982</td><td class="num">17 097</td></tr>
+    <tr><td>1999</td><td class="num">73 266</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>
+    <tr><td>2024</td><td class="num">36 188</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>
+    <tr><td>2029</td><td class="num">—</td><td class="num">33 971</td><td class="num">28 657 – 40 271</td><td class="num">30 696</td><td class="num">28 122</td><td class="num">30 904</td><td class="num"><strong>35 161</strong></td><td class="num">34 050 – 36 291</td></tr>
+    <tr><td>2034</td><td class="num">—</td><td class="num">29 633</td><td class="num">24 510 – 35 827</td><td class="num">23 378</td><td class="num">21 853</td><td class="num">23 950</td><td class="num"><strong>31 233</strong></td><td class="num">30 016 – 32 481</td></tr>
+    <tr><td>2039</td><td class="num">—</td><td class="num">25 848</td><td class="num">20 913 – 31 948</td><td class="num">16 061</td><td class="num">16 982</td><td class="num">17 097</td><td class="num"><strong>27 863</strong></td><td class="num">26 591 – 29 233</td></tr>
   </tbody>
 </table>
 
@@ -293,7 +296,7 @@
   <strong>Klíčové zjištění validace</strong>
   Všechny čtyři modely <strong>přestřelují skutečnost</strong> v roce 2024 o 11–17 %. To znamená: pozorovaný pokles je <em>rychlejší</em>, než modely fittnuté na 1999–2019 dokázaly extrapolovat. Opravený 90 % CI (OLS predikční interval s faktorem extrapolace) skutečnou hodnotu na diecézní úrovni pořád nepokrývá — strukturální zrychlení poklesu po roce 2019 je mimo rozsah parametrické nejistoty.
   <br><br>
-  <strong>Důsledek pro prognózu 2039:</strong> Bodové predikce (zejména exp) mohou být <em>příliš optimistické</em> — skutečnost bude pravděpodobně blíže recent/lin/Holt modelu (≈ 17 000 osob). CI slouží jako indikátor parametrické nejistoty, ne jako garance pokrytí.
+  <strong>Důsledek pro prognózu 2039:</strong> Bodové predikce (zejména exp) mohou být <em>příliš optimistické</em> — skutečnost bude pravděpodobně někde mezi lin/Holt (≈ 17 000) a HNB (≈ 28 000); HNB regularizuje dolů extrémní pokles u malých farností. CI slouží jako indikátor parametrické nejistoty, ne jako garance pokrytí.
 </div>
 
 <p>Na úrovni farností je MAPE pro exp model 44,0 %, vážený MAPE 25,0 %, RMSE 59. Coverage 90 % CI po opravě OLS intervalu: <strong>76 %</strong> (dříve 45 %). Pro horizont 2039 (15 let) lze chybu očekávat ještě vyšší.</p>

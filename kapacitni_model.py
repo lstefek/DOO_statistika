@@ -94,7 +94,8 @@ def vericich_v_roce(
 
     zdroj:
       'actual'              — historická skutečnost z scitani
-      'model_valid'         — validní exp model (validni=1)
+      'hnb'                 — hierarchický NB model (primární pro budoucí roky)
+      'model_valid'         — validní exp model, pokud chybí HNB
       'fallback_last_known' — nevalidní model, použita poslední kladná hodnota
       'fallback_zero'       — nevalidní model a poslední hodnota = 0 nebo žádná data
 
@@ -118,17 +119,24 @@ def vericich_v_roce(
                 out[f] = (float(v), "actual", 1)
         return out
 
-    # Pro budoucí rok: vyhodnotit exp model pouze pro platné predikce
+    # Pro budoucí rok: primárně HNB model, fallback exp (jen validní) nebo last_known
+    hnb_rows = cur.execute(
+        "SELECT farnost, hnb_val FROM predikce_farnost WHERE rok=? AND hnb_val IS NOT NULL",
+        (rok,),
+    ).fetchall()
+    hnb = {f: v for f, v in hnb_rows}
+
     t = rok - 1999
-    rows = cur.execute(
+    model_rows = cur.execute(
         "SELECT farnost, exp_a, exp_b, validni, last_value FROM predikce_farnost_model"
     ).fetchall()
-    for f, a, b, validni, last_val in rows:
-        if validni == 1 and a is not None and b is not None:
+    for f, a, b, validni, last_val in model_rows:
+        if f in hnb:
+            out[f] = (max(0.0, float(hnb[f])), "hnb", 1)
+        elif validni == 1 and a is not None and b is not None:
             val = max(0.0, a * math.exp(b * t))
             out[f] = (val, "model_valid", 1)
         else:
-            # Fallback last_known: poslední zaznamenaná hodnota (nula je platná)
             if last_val is None or last_val == 0:
                 out[f] = (0.0, "fallback_zero", 0)
             else:

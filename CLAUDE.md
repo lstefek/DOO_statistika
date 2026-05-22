@@ -18,12 +18,13 @@ python3 import_csv_to_sqlite.py   # CSV → tabulka scitani
 python3 scrape_knezi.py           # doo.cz → tabulka knezi
 python3 scrape_souradnice.py      # doo.cz → tabulka farnosti_souradnice
 python3 predikce.py               # → tabulky predikce_*
-python3 kapacitni_model.py        # → tabulka kapacitni_model
+python3 predikce_hnb.py           # → hnb_val/lo/hi (~8 min, NUTS); centrální model
+python3 kapacitni_model.py        # → tabulka kapacitni_model (primárně z HNB)
 python3 grafy.py                  # → grafy/*.png
 python3 mapa_ohrozenych.py        # → grafy/mapa_*.html
 
 # Jen přepočet predikcí a výstupů (bez scrapingu):
-python3 predikce.py && python3 kapacitni_model.py && python3 grafy.py && python3 mapa_ohrozenych.py
+python3 predikce.py && python3 predikce_hnb.py && python3 kapacitni_model.py && python3 grafy.py && python3 mapa_ohrozenych.py
 ```
 
 Závislosti: `pip install numpy scipy matplotlib folium --break-system-packages`

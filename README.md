@@ -19,6 +19,7 @@ Analýza zpracovává výsledky celostátního sčítání ČBK z let 1999–202
 # Plná obnova pipeline:
 python3 import_csv_to_sqlite.py
 python3 predikce.py
+python3 predikce_hnb.py       # hierarchický NB model (~8 min)
 python3 validace_predikce.py
 python3 kapacitni_model.py
 python3 grafy.py
