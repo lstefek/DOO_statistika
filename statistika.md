@@ -23,7 +23,9 @@ Analýza návštěvnosti nedělních bohoslužeb v Diecézi ostravsko-opavské n
 | `report.html` | Závěrečný HTML report |
 | `requirements.txt` | Python závislosti |
 | `statistika_web.zip` | Balíček pro nasazení na web |
-| `grafy/` | Adresář s grafy a mapami |
+| `validace_predikce.txt` | Textový výstup leave-2024-out validace |
+| `grafy/` | Adresář s grafy a mapami (PNG + Folium HTML) |
+| `CLAUDE.md` | Instrukce pro Claude Code (AI asistent) |
 
 ---
 
@@ -35,9 +37,9 @@ Analýza návštěvnosti nedělních bohoslužeb v Diecézi ostravsko-opavské n
 | `dieceze_statistiky` | Celodiecézní statistiky z Wikipedie (1999–2019) | rok, obyvatele, katolici, knezi, jahni, krty |
 | `knezi` | Kněží přiřazení k farnostem (scraping 2025) | farnost, guid, role, jmeno |
 | `farnosti_souradnice` | GPS souřadnice 277/277 farností (zdroj: 'web' / 'manual') | farnost, guid, lat, lon, zdroj |
-| `predikce_dieceze` | Predikce + 90% CI | rok, hodnota, exp_val, exp_lo, exp_hi, lin_val, recent_val |
-| `predikce_dekanat` | Predikce pro 11 děkanátů | dekanat, rok, hodnota, exp_val, …, validni |
-| `predikce_farnost` | Predikce pro každou farnost | farnost, rok, hodnota, exp_val, …, validni |
+| `predikce_dieceze` | Predikce diecéze + 90% CI | rok, hodnota, exp_val, exp_lo, exp_hi, lin_val, recent_val |
+| `predikce_dekanat` | Predikce 11 děkanátů | dekanat, rok, hodnota, exp_val, exp_lo, exp_hi, lin_val, recent_val, r2_exp_log, r2_lin, validni |
+| `predikce_farnost` | Predikce 277 farností | farnost, rok, hodnota, exp_val, exp_lo, exp_hi, lin_val, recent_val, r2_exp_log, r2_lin, validni |
 | `predikce_farnost_model` | Parametry modelu (1 řádek/farnost) | exp_a, exp_b, sigma_log, lin_a, lin_b, recent_a, recent_b, validni, duvod_invaliditn |
 | `kapacitni_model` | Hlavní scénář pokrytí | rok, farnost, vericich, pocet_knezi, stav, scenar, max_far_knez |
 | `citlivost_scenare` | 9 scénářů (3 poklesy × 3 limity) | scenar, max_far_knez, rok, knezi, kapacita, pokryte, ohrozene |
@@ -56,9 +58,12 @@ CI_Z     = 1.645     # 90% predikční interval
 
 # kapacitni_model.py
 AKTIVNI_ROLE = (Farář, Administrátor*, Farní vikář, Výpomocný duchovní, Rektor*)
-REFERENCNI_ROK = 2024  # KNEZI_2024 se odvodí z DB (default 186)
+REFERENCNI_ROK = 2024
+# Počet kněží v REFERENCNI_ROK se odvodí z tabulky knezi automaticky
+# (aktivni_knezi() — momentálně 186). Lze přepsat přes `--knezi N`.
 POKLES_SCENARE = {mild: -30%/10 let, base: -50%/10 let, severe: -65%/10 let}
 MAX_FAR_SCENARE = (2, 3, 4)
+# Hlavní scénář se ukládá s key (base, 2); ostatní jen do citlivost_scenare
 ```
 
 **Klíčové zjištění:** Periferní děkanáty (Bruntál, Krnov, Jeseník) překračují limit
@@ -107,12 +112,13 @@ python3 kapacitni_model.py && python3 grafy.py && python3 mapa_ohrozenych.py
 
 ## Aktualizace po sčítání 2029
 
-1. Nový CSV nahradí `scitani-srovnani-1999-2024-web.csv`.
-2. V `predikce.py` rozšířit `ROKY_HISTORICKE` o 2029, `ROKY_PREDIKCE` posunout.
-3. V `validace_predikce.py` nastavit `HOLDOUT_ROK = 2029`.
-4. V `kapacitni_model.py` aktualizovat `REFERENCNI_ROK = 2029` (po novém scrapingu kněží).
-5. Aktualizovat `dieceze_statistiky` o roky 2024+.
-6. Spustit celý pipeline.
+1. Nový CSV nahradí `scitani-srovnani-1999-2024-web.csv` (nebo přejmenovat — pak upravit `CSV_FILE` v `import_csv_to_sqlite.py`).
+2. V `predikce.py` rozšířit `ROKY_HISTORICKE` o 2029, `ROKY_PREDIKCE` posunout o 5 let (2034, 2039, 2044).
+3. V `validace_predikce.py` nastavit `HOLDOUT_ROK = 2029` — leave-out test se posune.
+4. V `kapacitni_model.py` aktualizovat `REFERENCNI_ROK = 2029` (po novém scrapingu kněží). Konstanta `KNEZI_2024` neexistuje — počet se odvozuje z DB.
+5. Aktualizovat `dieceze_statistiky` o roky 2024+ (počet kněží z diecézní ročenky); pak lze fitnout skutečný pokles a opustit hypotézu −50 %/10 let.
+6. Pokud po novém scrapingu vzniknou farnosti bez GPS, doplnit je do `MANUAL_GPS` v `scrape_souradnice.py`.
+7. Spustit celý pipeline (viz výše).
 
 ---
 
@@ -156,7 +162,17 @@ Kompletní review pipeline z 2026-05-22 odhalil tyto bloky problémů (všechny 
 - ~~Věk komunity v reportu uváděl ~44/47, správně je 45/49 vážený.~~
 - ~~Počet farností 278 sjednocen na 277.~~
 
-Detail validace: viz git historie tohoto repozitáře (initial commit) — `Validační report`.
+Detail validace: viz git historie repozitáře `lstefek/DOO_statistika` (commit b94f606 a předchozí).
+
+### Otevřené body do další iterace
+
+Nedořešené nebo nutné zopakovat:
+
+- **Aktualizace `dieceze_statistiky` o 2020–2024** — nutné pro odvození skutečného tempa poklesu kněží z dat místo hypotézy.
+- **Geografický model** — proporční alokace kněží předpokládá, že děkanáty si dnes drží relativní podíl kněží. Realita po přesunech může být jiná; pro přesnější model by bylo vhodné zahrnout omezení vzdálenosti (kněz z farnosti X může obsluhovat farnosti v okruhu Y km), což vyžaduje algoritmus typu k-Median nebo Set Cover.
+- **Akcelerace poklesu** — exp model přestřeluje. Alternativa: segmented model se zlomem 2014 nebo 2019, případně weighted regression s vyšší vahou na poslední body.
+- **CI bias** — predikční interval ze σ log-reziduí je úzký, protože nezohledňuje akceleraci a má malý počet stupňů volnosti (4). Zvážit bootstrap CI z prediktorů.
+- **Out-of-sample test** je dnes jen na úrovni jednoho holdoutu (2024). Při novém sčítání 2029 ho zopakovat (HOLDOUT_ROK=2029) a sledovat vývoj MAPE.
 
 ---
 
@@ -194,3 +210,4 @@ pip install -r requirements.txt --break-system-packages
 |-------|-------|
 | 2026-05-21 | Prvotní analýza — data 1999–2024, predikce 2029–2039, kapacitní model, report |
 | 2026-05-22 | Validační report a verze 2 — opravy kritických a závažných nedostatků |
+| 2026-05-22 | Repo `lstefek/DOO_statistika` na GitHubu, veřejně |
