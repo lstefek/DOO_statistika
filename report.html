@@ -149,7 +149,7 @@
 </ul>
 <p>Z 277 farností je <strong>177 platných predikcí (64 %)</strong> a 100 neplatných. Neplatné nelze pro plánování použít — typicky malé farnosti s nesouvislými řadami (Býkov, Travná, Zálesí, atd.).</p>
 
-<p>Kromě bodové predikce model počítá i <strong>90 % predikční interval</strong> ze směrodatné odchylky reziduí v log prostoru. <strong>Upozornění (v3):</strong> tento interval je empiricky podkalibrovaný — nezachycuje nejistotu parametrů ani strukturální zrychlení poklesu. Leave-2024-out validace ukázala coverage 45 % místo deklarovaných 90 %. Pro plánování je důležitější modelové pásmo a scénářová citlivost než samotné CI.</p>
+<p>Kromě bodové predikce model počítá <strong>90 % predikční interval</strong> metodou OLS: <code>t<sub>n−2, 0,95</sub> · σ · √(1 + 1/n + (t*−t̄)²/S<sub>xx</sub>)</code>. Faktor extrapolace <code>(t*−t̄)²/S<sub>xx</sub></code> zajišťuje, že interval se rozšiřuje s rostoucím horizontem. Leave-2024-out validace ukázala coverage <strong>76 %</strong> (dříve 45 % před opravou). Zbývající deficit oproti 90 % odráží strukturální zrychlení poklesu po roce 2019, které nelze zachytit parametrickou nejistotou.</p>
 
 <p><strong>Zacházení s nulami (v3):</strong> hodnota <code>osob_celkem = 0</code> ve zdrojových datech je interpretována jako <em>skutečná nulová účast</em>, nikoli jako chybějící záznam. Exp model fituje pouze kladné body (<code>y &gt; 0</code>) — nuly do fitu nevstupují, ale jsou uchovány jako metadata (<code>zero_count</code>, <code>last_value</code>). Farnost s poslední hodnotou 0 a neplatným modelem dostane v kapacitním modelu fallback <em>fallback_zero</em>.</p>
 
@@ -256,9 +256,9 @@
   <tbody>
     <tr><td>1999</td><td class="num">73 266</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>
     <tr><td>2024</td><td class="num">36 188</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>
-    <tr><td>2029</td><td class="num">—</td><td class="num">33 971</td><td class="num">30 859 – 37 397</td><td class="num">30 696</td><td class="num">28 122</td><td class="num">30 904</td></tr>
-    <tr><td>2034</td><td class="num">—</td><td class="num">29 633</td><td class="num">26 918 – 32 621</td><td class="num">23 378</td><td class="num">21 853</td><td class="num">23 950</td></tr>
-    <tr><td>2039</td><td class="num">—</td><td class="num">25 848</td><td class="num">23 480 – 28 455</td><td class="num">16 061</td><td class="num">16 982</td><td class="num">17 097</td></tr>
+    <tr><td>2029</td><td class="num">—</td><td class="num">33 971</td><td class="num">28 657 – 40 271</td><td class="num">30 696</td><td class="num">28 122</td><td class="num">30 904</td></tr>
+    <tr><td>2034</td><td class="num">—</td><td class="num">29 633</td><td class="num">24 510 – 35 827</td><td class="num">23 378</td><td class="num">21 853</td><td class="num">23 950</td></tr>
+    <tr><td>2039</td><td class="num">—</td><td class="num">25 848</td><td class="num">20 913 – 31 948</td><td class="num">16 061</td><td class="num">16 982</td><td class="num">17 097</td></tr>
   </tbody>
 </table>
 
@@ -291,24 +291,24 @@
 
 <div class="box danger">
   <strong>Klíčové zjištění validace</strong>
-  Všechny čtyři modely <strong>přestřelují skutečnost</strong> v roce 2024 o 11–17 %. To znamená: pozorovaný pokles je <em>rychlejší</em>, než modely fittnuté na 1999–2019 dokázaly extrapolovat. Také 90 % CI exp modelu nepojme skutečnou hodnotu — interval je příliš úzký.
+  Všechny čtyři modely <strong>přestřelují skutečnost</strong> v roce 2024 o 11–17 %. To znamená: pozorovaný pokles je <em>rychlejší</em>, než modely fittnuté na 1999–2019 dokázaly extrapolovat. Opravený 90 % CI (OLS predikční interval s faktorem extrapolace) skutečnou hodnotu na diecézní úrovni pořád nepokrývá — strukturální zrychlení poklesu po roce 2019 je mimo rozsah parametrické nejistoty.
   <br><br>
-  <strong>Důsledek pro prognózu 2039:</strong> Bodové predikce (zejména exp) mohou být <em>příliš optimistické</em> — skutečnost bude pravděpodobně blíže recent/lin modelu (≈ 17 000 osob). CI exp by se mělo interpretovat jen jako spodní hranice nejistoty.
+  <strong>Důsledek pro prognózu 2039:</strong> Bodové predikce (zejména exp) mohou být <em>příliš optimistické</em> — skutečnost bude pravděpodobně blíže recent/lin/Holt modelu (≈ 17 000 osob). CI slouží jako indikátor parametrické nejistoty, ne jako garance pokrytí.
 </div>
 
-<p>Na úrovni farností je MAPE pro exp model 44,0 %, vážený MAPE 25,0 %, RMSE 59. Coverage 90 % CI: <strong>45 %</strong> (podkalibrovaný interval). Pro horizont 2039 (15 let) lze chybu očekávat ještě vyšší.</p>
+<p>Na úrovni farností je MAPE pro exp model 44,0 %, vážený MAPE 25,0 %, RMSE 59. Coverage 90 % CI po opravě OLS intervalu: <strong>76 %</strong> (dříve 45 %). Pro horizont 2039 (15 let) lze chybu očekávat ještě vyšší.</p>
 
 <table>
   <thead>
     <tr><th>Segment</th><th class="num">n</th><th class="num">MAPE</th><th class="num">wMAPE</th><th class="num">bias</th><th class="num">Coverage CI</th></tr>
   </thead>
   <tbody>
-    <tr><td>Všechny farnosti</td>        <td class="num">261</td><td class="num red">44,0 %</td><td class="num">25,0 %</td><td class="num red">+24,4</td><td class="num">45 %</td></tr>
-    <tr><td>Validní predikce (validni=1)</td><td class="num">173</td><td class="num ora">29,9 %</td><td class="num">20,1 %</td><td class="num">+25,3</td><td class="num">46 %</td></tr>
-    <tr><td>Nevalidní (validni=0)</td>   <td class="num">88</td><td class="num red">71,6 %</td><td class="num red">46,5 %</td><td class="num ora">+22,6</td><td class="num">43 %</td></tr>
-    <tr><td>Velikost 2024 ≥ 100</td>     <td class="num">95</td><td class="num grn">26,8 %</td><td class="num grn">21,3 %</td><td class="num">+46,4</td><td class="num">39 %</td></tr>
-    <tr><td>Velikost 2024 = 30–99</td>   <td class="num">90</td><td class="num ora">44,1 %</td><td class="num">39,7 %</td><td class="num">+17,2</td><td class="num">47 %</td></tr>
-    <tr><td>Velikost 2024 = 1–29</td>    <td class="num">76</td><td class="num red">65,2 %</td><td class="num red">55,0 %</td><td class="num">+5,5</td><td class="num">58 %</td></tr>
+    <tr><td>Všechny farnosti</td>        <td class="num">261</td><td class="num red">44,0 %</td><td class="num">25,0 %</td><td class="num red">+24,4</td><td class="num">76 %</td></tr>
+    <tr><td>Validní predikce (validni=1)</td><td class="num">173</td><td class="num ora">29,9 %</td><td class="num">20,1 %</td><td class="num">+25,3</td><td class="num">80 %</td></tr>
+    <tr><td>Nevalidní (validni=0)</td>   <td class="num">88</td><td class="num red">71,6 %</td><td class="num red">46,5 %</td><td class="num ora">+22,6</td><td class="num">69 %</td></tr>
+    <tr><td>Velikost 2024 ≥ 100</td>     <td class="num">95</td><td class="num grn">26,8 %</td><td class="num grn">21,3 %</td><td class="num">+46,4</td><td class="num">79 %</td></tr>
+    <tr><td>Velikost 2024 = 30–99</td>   <td class="num">90</td><td class="num ora">44,1 %</td><td class="num">39,7 %</td><td class="num">+17,2</td><td class="num">80 %</td></tr>
+    <tr><td>Velikost 2024 = 1–29</td>    <td class="num">76</td><td class="num red">65,2 %</td><td class="num red">55,0 %</td><td class="num">+5,5</td><td class="num">82 %</td></tr>
   </tbody>
 </table>
 <p><em>Poznámka: nevalidní predikce mají téměř 2× horší chybu než validní. V kapacitním modelu v3 se nevalidní farnosti počítají přes fallback (last_known/fallback_zero), ne přes exp model.</em></p>

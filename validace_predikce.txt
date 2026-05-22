@@ -4,7 +4,7 @@
 Trénink: [1999, 2004, 2009, 2014, 2019]  →  predikce 2024
 Skutečnost 2024: 36 188
 
-  Exp    :   42 220  CI=[40 330; 44 200]  chyba=+16.7%  ✗ MIMO CI
+  Exp    :   42 220  CI=[38 395; 46 427]  chyba=+16.7%  ✗ MIMO CI
   Poznámka: 90% CI exp modelu je empiricky podkalibrovaný — nezachycuje nejistotu parametrů ani strukturální zrychlení poklesu.
   Lin    :   40 022  chyba=+10.6%
   Recent :   41 068  chyba=+13.5%
@@ -15,29 +15,29 @@ Skutečnost 2024: 36 188
   Lin     :  n=261  MAPE=  48.6%  wMAPE=  26.6%  RMSE=  66.0  bias=+12.4  medAPE=  28.2%  nadhodnoceno= 65.1%
   Recent  :  n=261  MAPE=  77.6%  wMAPE=  36.5%  RMSE= 160.5  bias=+31.7  medAPE=  30.8%  nadhodnoceno= 58.6%
   Holt    :  n=259  MAPE=  49.0%  wMAPE=  25.6%  RMSE=  61.8  bias=+15.0  medAPE=  25.0%  nadhodnoceno= 62.9%
-  Coverage 90% CI exp: 123/274 (44.9 %)
+  Coverage 90% CI exp: 209/274 (76.3 %)
 
 ## 3. FARNOSTI — segmentované metriky (exp model, leave-2024-out)
   Validní predikce (validni=1):
-  n=173  MAPE=  29.9%  wMAPE=  20.1%  RMSE=  56.0  bias=+25.3  medAPE=  21.5%  nadhodnoceno= 72.8%  coverage=81/177 (45.8 %)
+  n=173  MAPE=  29.9%  wMAPE=  20.1%  RMSE=  56.0  bias=+25.3  medAPE=  21.5%  nadhodnoceno= 72.8%  coverage=142/177 (80.2 %)
   Nevalidní predikce (validni=0):
-  n= 88  MAPE=  71.6%  wMAPE=  46.5%  RMSE=  65.5  bias=+22.6  medAPE=  40.6%  nadhodnoceno= 75.0%  coverage=42/97 (43.3 %)
+  n= 88  MAPE=  71.6%  wMAPE=  46.5%  RMSE=  65.5  bias=+22.6  medAPE=  40.6%  nadhodnoceno= 75.0%  coverage=67/97 (69.1 %)
   Farnosti s alespoň jednou nulou v historii:
   (žádná data)  coverage=0/13 (0.0 %)
   Velikost 2024 = 0:
   (žádná data)  coverage=0/13 (0.0 %)
   Velikost 2024 = 1–29:
-  n= 76  MAPE=  65.2%  wMAPE=  55.0%  RMSE=  15.9  bias=+5.5  medAPE=  33.6%  nadhodnoceno= 65.8%  coverage=44/76 (57.9 %)
+  n= 76  MAPE=  65.2%  wMAPE=  55.0%  RMSE=  15.9  bias=+5.5  medAPE=  33.6%  nadhodnoceno= 65.8%  coverage=62/76 (81.6 %)
   Velikost 2024 = 30–99:
-  n= 90  MAPE=  44.1%  wMAPE=  39.7%  RMSE=  36.6  bias=+17.2  medAPE=  28.0%  nadhodnoceno= 74.4%  coverage=42/90 (46.7 %)
+  n= 90  MAPE=  44.1%  wMAPE=  39.7%  RMSE=  36.6  bias=+17.2  medAPE=  28.0%  nadhodnoceno= 74.4%  coverage=72/90 (80.0 %)
   Velikost 2024 ≥ 100:
-  n= 95  MAPE=  26.8%  wMAPE=  21.3%  RMSE=  90.6  bias=+46.4  medAPE=  20.1%  nadhodnoceno= 78.9%  coverage=37/95 (38.9 %)
+  n= 95  MAPE=  26.8%  wMAPE=  21.3%  RMSE=  90.6  bias=+46.4  medAPE=  20.1%  nadhodnoceno= 78.9%  coverage=75/95 (78.9 %)
 
 ## 4. DIECÉZE — rolling holdout (trénink 1999–2014, holdout 2019)
 Trénink: [1999, 2004, 2009, 2014]  →  predikce 2019
 Skutečnost 2019: 46 568
 
-  Exp    :   48 541  CI=[46 309; 50 881]  chyba=+4.2%  ✓ v CI
+  Exp    :   48 541  CI=[42 533; 55 397]  chyba=+4.2%  ✓ v CI
   Lin    :   47 127  chyba=+1.2%
   Recent :   45 038  chyba=-3.3%
   Holt   :   47 214  chyba=+1.4%
@@ -47,7 +47,7 @@ Skutečnost 2019: 46 568
   Lin     :  n=269  MAPE=  50.9%  wMAPE=  23.7%  RMSE=  84.4  bias=-0.1  medAPE=  25.6%  nadhodnoceno= 55.0%
   Recent  :  n=269  MAPE=  69.0%  wMAPE=  22.4%  RMSE=  66.3  bias=+1.0  medAPE=  25.0%  nadhodnoceno= 53.9%
   Holt    :  n=264  MAPE=  51.4%  wMAPE=  20.9%  RMSE=  62.2  bias=+0.5  medAPE=  24.2%  nadhodnoceno= 54.9%
-  Coverage 90% CI exp: 116/271 (42.8 %)
+  Coverage 90% CI exp: 215/271 (79.3 %)
 
 ## 6. DĚKANÁTY — leave-2024-out
 Děkanát           Skut     Exp      Δ%     Lin      Δ%     Rec      Δ%    Holt      Δ%

@@ -25,6 +25,7 @@ import sqlite3
 from pathlib import Path
 
 import numpy as np
+from scipy.stats import t as t_dist
 from statsmodels.tsa.holtwinters import ExponentialSmoothing as HW
 
 DB_FILE = Path(__file__).parent / "scitani.db"
@@ -34,14 +35,14 @@ VSECHNY_ROKY    = ROKY_HISTORICKE + ROKY_PREDIKCE
 
 MIN_BODY = 4        # minimální počet nenulových bodů pro důvěryhodný fit
 R2_PRAH  = 0.5      # exp R² (log space) pod tímto prahem → predikce není validní
-CI_Z     = 1.645    # 90% z-skóre pro predikční interval
+CI_ALPHA = 0.10     # 1 - 0.90; oboustranný interval → každá strana 0.05
 
 
 # ── fit funkce ────────────────────────────────────────────────────────────────
 
 def fit_exp(roky: list[int], hodnoty: list[float]) -> dict | None:
     """Fituje y = a·exp(b·t) metodou OLS na log(y), pouze body y > 0.
-    Vrací dict s a, b, sigma_log (rozptyl reziduí log y), r2_log nebo None."""
+    Vrací dict s a, b, sigma_log, r2_log, t_mean, Sxx — potřebné pro OLS predikční interval."""
     t = np.array([r - 1999 for r in roky], dtype=float)
     y = np.array(hodnoty, dtype=float)
     mask = y > 0
@@ -52,17 +53,19 @@ def fit_exp(roky: list[int], hodnoty: list[float]) -> dict | None:
     b, log_a = np.polyfit(t_m, log_y, 1)
     a = math.exp(log_a)
 
-    # R² v log prostoru (konzistentně s OLS minimalizovanou funkcí)
+    # R² v log prostoru
     log_yhat = log_a + b * t_m
     ss_res = float(np.sum((log_y - log_yhat) ** 2))
     ss_tot = float(np.sum((log_y - log_y.mean()) ** 2))
     r2_log = 1.0 - ss_res / ss_tot if ss_tot > 0 else 0.0
 
-    # Reziduální směrodatná odchylka v log prostoru (pro CI)
     n = len(t_m)
     sigma_log = math.sqrt(ss_res / max(n - 2, 1)) if n > 2 else 0.0
+    t_mean = float(t_m.mean())
+    Sxx = float(np.sum((t_m - t_mean) ** 2))
 
-    return {"a": a, "b": b, "n": n, "r2_log": r2_log, "sigma_log": sigma_log}
+    return {"a": a, "b": b, "n": n, "r2_log": r2_log, "sigma_log": sigma_log,
+            "t_mean": t_mean, "Sxx": Sxx}
 
 
 def fit_lin(roky: list[int], hodnoty: list[float]) -> dict | None:
@@ -98,15 +101,28 @@ def fit_recent(roky: list[int], hodnoty: list[float], n_last: int = 2) -> dict |
 # ── predikce + CI ─────────────────────────────────────────────────────────────
 
 def predikuj_exp(params: dict, rok: int) -> tuple[float, float, float] | None:
-    """Vrátí (point, lo, hi) pro 90% predikční interval v exp modelu."""
+    """Vrátí (point, lo, hi) pro 90% OLS predikční interval.
+
+    Plná formulka: t_{n-2, 0.95} · σ · √(1 + 1/n + (t*−t̄)²/Sxx)
+    Zachycuje reziduální rozptyl i nejistotu parametrů (vliv extrapolace).
+    """
     if params is None:
         return None
-    t = rok - 1999
-    log_yhat = math.log(params["a"]) + params["b"] * t
+    t_star = rok - 1999
+    log_yhat = math.log(params["a"]) + params["b"] * t_star
     sigma = params.get("sigma_log", 0.0)
+    n     = params.get("n", 2)
+    t_mean = params.get("t_mean", t_star)
+    Sxx    = params.get("Sxx", 1.0)
+
+    df = max(n - 2, 1)
+    t_crit = float(t_dist.ppf(1 - CI_ALPHA / 2, df=df))
+    se = sigma * math.sqrt(1.0 + 1.0 / n + (t_star - t_mean) ** 2 / max(Sxx, 1e-9))
+    margin = t_crit * se
+
     point = math.exp(log_yhat)
-    lo = math.exp(log_yhat - CI_Z * sigma)
-    hi = math.exp(log_yhat + CI_Z * sigma)
+    lo = math.exp(log_yhat - margin)
+    hi = math.exp(log_yhat + margin)
     return max(0.0, point), max(0.0, lo), max(0.0, hi)
 
 

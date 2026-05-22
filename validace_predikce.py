@@ -18,7 +18,7 @@ from pathlib import Path
 import numpy as np
 
 from predikce import (
-    ROKY_HISTORICKE, MIN_BODY, R2_PRAH, CI_Z,
+    ROKY_HISTORICKE, MIN_BODY, R2_PRAH, CI_ALPHA,
     fit_exp, fit_lin, fit_recent, fit_holt,
     predikuj_exp, predikuj_lin, predikuj_holt,
 )
