@@ -56,8 +56,9 @@ ROKY_PREDIKCE   = [2029, 2034, 2039]                     # posunout o 5 let
 
 ## Corrigenda
 
-Manuální korekce dat jsou zdokumentovány v `statistika.md` (sekce Corrigenda). Aktuálně:
-- Lubina 2014: `osob_celkem` změněno 238 → 210 (outlier)
+Manuální korekce dat jsou zdokumentovány v `statistika.md` (sekce Corrigenda).
+Aktuálně nejsou aplikovány žádné korekce. Hodnota Lubina 2014 je převzata ze
+zdrojového CSV jako `osob_celkem=238`, `muz=110`, `zena=128`.
 
 ## Výstupy
 

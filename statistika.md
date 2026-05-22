@@ -12,7 +12,7 @@ Analýza návštěvnosti nedělních bohoslužeb v Diecézi ostravsko-opavské n
 |--------|-------|
 | `scitani.db` | Hlavní SQLite databáze — všechna data |
 | `scitani-srovnani-1999-2024-web.csv` | Zdrojová data sčítání (vstup) |
-| `import_csv_to_sqlite.py` | Import CSV → tabulka `scitani` + aplikace corrigenda |
+| `import_csv_to_sqlite.py` | Import CSV → tabulka `scitani` + volitelné corrigenda |
 | `scrape_knezi.py` | Scraping kněží z doo.cz/katalog/farnosti/ (BS4, retry, dedup) |
 | `scrape_souradnice.py` | Scraping GPS souřadnic farností (s manuálním override) |
 | `predikce.py` | 3 modely predikce (exp + lin + recent), 90% CI, validita |
@@ -78,9 +78,9 @@ Modely fitnuté pouze na 1999–2019, předpovídající rok 2024:
 
 | Model | Skutečnost 2024 | Predikce | Chyba |
 |-------|----------------|----------|-------|
-| Exp | 36 188 | 42 209 | **+16,6 %** (90% CI nepojme skutečnost) |
-| Lin | 36 188 | 40 008 | +10,6 % |
-| Recent (2b) | 36 188 | 41 089 | +13,5 % |
+| Exp | 36 188 | 42 220 | **+16,7 %** (90% CI nepojme skutečnost) |
+| Lin | 36 188 | 40 022 | +10,6 % |
+| Recent (2b) | 36 188 | 41 068 | +13,5 % |
 
 Pozorovaný pokles 2019→2024 je rychlejší, než modely fitnuté na 1999–2019 očekávaly.
 **Důsledek:** bodové predikce 2039 mohou být příliš optimistické. Skutečný pokles bude
@@ -94,7 +94,7 @@ pravděpodobně blíže lin/recent než exp modelu.
 pip install -r requirements.txt --break-system-packages
 
 # Plná obnova (po novém sčítání):
-python3 import_csv_to_sqlite.py   # CSV → tabulka scitani + corrigenda
+python3 import_csv_to_sqlite.py   # CSV → tabulka scitani (+ volitelná corrigenda)
 python3 scrape_knezi.py           # doo.cz → tabulka knezi
 python3 scrape_souradnice.py      # doo.cz → tabulka farnosti_souradnice
 python3 predikce.py               # → tabulky predikce_*
@@ -125,10 +125,11 @@ python3 kapacitni_model.py && python3 grafy.py && python3 mapa_ohrozenych.py
 ## Corrigenda — manuální korekce dat
 
 Korekce jsou aplikovány automaticky z `CORRIGENDA` v `import_csv_to_sqlite.py`.
+Aktuálně nejsou aplikovány žádné korekce.
 
 | Datum | Farnost | Rok | Hodnota | Důvod |
 |-------|---------|-----|---------|-------|
-| 2026-05-21 | Lubina | 2014 | osob_celkem 238 → 210, muz 110 → 97, zena 128 → 113 | Outlier; muz/zena přeškálovány proporčně, aby suma odpovídala. |
+| 2026-05-22 | Lubina | 2014 | ponecháno osob_celkem 238, muz 110, zena 128 | Původní dočasná korekce na 210 byla zrušena; pravdivá hodnota je zdrojových 238. |
 
 ---
 

@@ -2,17 +2,17 @@
 
 ## DIECÉZE
 Trénink: roky [1999, 2004, 2009, 2014, 2019]
-Trénink hodnoty: [73266, 67108, 61911, 52777, 46568]
+Trénink hodnoty: [73266, 67108, 61911, 52805, 46568]
 Skutečnost 2024: 36 188
 
-  Exp model     : 42,209  CI=[40,317; 44,190]  chyba=+16.6%  v CI=✗
-  Lin model     : 40,008  chyba=+10.6%
-  Recent (2b)   : 41,089  chyba=+13.5%
+  Exp model     : 42,220  CI=[40,330; 44,200]  chyba=+16.7%  v CI=✗
+  Lin model     : 40,022  chyba=+10.6%
+  Recent (2b)   : 41,068  chyba=+13.5%
 
 ## FARNOSTI (n=274)
-  Exp      n=261  MAPE=  43.9%  wMAPE=  24.9%  RMSE=  59.3  bias=+24.4
-  Lin      n=261  MAPE=  48.5%  wMAPE=  26.5%  RMSE=  66.0  bias=+12.3
-  Recent   n=261  MAPE=  77.6%  wMAPE=  36.5%  RMSE= 160.5  bias=+31.8
+  Exp      n=261  MAPE=  44.0%  wMAPE=  25.0%  RMSE=  59.4  bias=+24.4
+  Lin      n=261  MAPE=  48.6%  wMAPE=  26.6%  RMSE=  66.0  bias=+12.4
+  Recent   n=261  MAPE=  77.6%  wMAPE=  36.5%  RMSE= 160.5  bias=+31.7
 
 ## DĚKANÁTY
 Děkanát           Skut     Exp      Δ%     Lin      Δ%     Rec      Δ%
@@ -25,7 +25,7 @@ Jeseník            714    1042  +45.9%    1046  +46.5%     839  +17.4%
 Karviná           3985    4695  +17.8%    4149   +4.1%    5010  +25.7%
 Krnov              507     680  +34.2%     649  +28.0%     612  +20.7%
 Místek            2746    3196  +16.4%    3106  +13.1%    2655   -3.3%
-Nový Jičín        3203    3568  +11.4%    3302   +3.1%    3801  +18.7%
+Nový Jičín        3203    3579  +11.7%    3316   +3.5%    3777  +17.9%
 Opava             3908    4562  +16.7%    4182   +7.0%    4219   +8.0%
 Ostrava           4432    5544  +25.1%    5410  +22.1%    5799  +30.9%
 

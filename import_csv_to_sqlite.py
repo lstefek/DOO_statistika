@@ -5,7 +5,8 @@ Import scitani-srovnani CSV do SQLite databáze.
 Místo mazání celé DB se pouze přepíše tabulka `scitani` — zachovají se tedy
 ostatní tabulky (knezi, farnosti_souradnice, dieceze_statistiky, predikce_*).
 
-Po importu se aplikují manuální korekce dat (CORRIGENDA) — viz statistika.md.
+Po importu se aplikují manuální korekce dat (CORRIGENDA), pokud jsou uvedeny —
+viz statistika.md.
 """
 
 import csv
@@ -19,8 +20,6 @@ DB_FILE  = Path(__file__).parent / "scitani.db"
 # Manuální korekce v datech (osob_celkem, muz, zena se opraví proporčně).
 # Pole: (farnost, rok, osob_celkem_nový, poznámka)
 CORRIGENDA: list[tuple[str, int, int, str]] = [
-    ("Lubina", 2014, 210, "Outlier — hodnota 238 neodpovídá trendu, opraveno na 210; "
-                          "muz/zena přeškálovány proporčně (97/113)."),
 ]
 
 

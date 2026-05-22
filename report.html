@@ -116,10 +116,10 @@
     <li>NULL hodnoty ve sčítání už nejsou mapovány na 0 — 100 farností s neúplnými řadami má nyní explicitně neplatnou predikci (flag <code>validni=0</code>).</li>
     <li>R² pro exp. model počítáme v log prostoru (konzistentně s OLS fitem).</li>
     <li>Přidán 90 % predikční interval (CI) a třetí model „Recent" (lokální tempo z posledních 2 bodů).</li>
-    <li>Provedena leave-2024-out validace: exp model na diecézi přestřeluje o +16,6 %. <strong>Skutečný pokles akceleruje rychleji než exp model předpokládá</strong> — viz sekce 5.</li>
+    <li>Provedena leave-2024-out validace: exp model na diecézi přestřeluje o +16,7 %. <strong>Skutečný pokles akceleruje rychleji než exp model předpokládá</strong> — viz sekce 5.</li>
     <li>Počet kněží 186 nyní odvozen z databáze (dříve hardcoded 192/198). Geografický kapacitní model — kapacita kněží alokovaná po děkanátech.</li>
     <li>Citlivostní analýza pro 3 scénáře poklesu kněží × 3 limity farností/kněz.</li>
-    <li>Korekce dat pro Lubinu 2014 nyní zachovává konzistenci muž/žena (97/113 místo 110/128).</li>
+    <li>Hodnota Lubina 2014 je ponechána podle zdrojového CSV: 238 osob, muž/žena 110/128.</li>
   </ul>
 </div>
 
@@ -261,15 +261,15 @@
   <tbody>
     <tr><td>1999</td><td class="num">73 266</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>
     <tr><td>2024</td><td class="num">36 188</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>
-    <tr><td>2029</td><td class="num">—</td><td class="num">33 966</td><td class="num">30 858 – 37 388</td><td class="num">30 689</td><td class="num">28 122</td></tr>
-    <tr><td>2034</td><td class="num">—</td><td class="num">29 628</td><td class="num">26 917 – 32 612</td><td class="num">23 370</td><td class="num">21 853</td></tr>
-    <tr><td>2039</td><td class="num">—</td><td class="num">25 844</td><td class="num">23 479 – 28 447</td><td class="num">16 052</td><td class="num">16 982</td></tr>
+    <tr><td>2029</td><td class="num">—</td><td class="num">33 971</td><td class="num">30 859 – 37 397</td><td class="num">30 696</td><td class="num">28 122</td></tr>
+    <tr><td>2034</td><td class="num">—</td><td class="num">29 633</td><td class="num">26 918 – 32 621</td><td class="num">23 378</td><td class="num">21 853</td></tr>
+    <tr><td>2039</td><td class="num">—</td><td class="num">25 848</td><td class="num">23 480 – 28 455</td><td class="num">16 061</td><td class="num">16 982</td></tr>
   </tbody>
 </table>
 
 <div class="box warn">
   <strong>Rozcházejí se modely</strong>
-  Exp model očekává pokles na 25 844 (−29 % vs. 2024). Lineární a recent shodně předpovídají kolem 16 000–17 000 (−54 %). Realističtější je střed mezi exp a recent, neboť exp model přestřeluje (viz sekce 5).
+  Exp model očekává pokles na 25 848 (−29 % vs. 2024). Lineární a recent shodně předpovídají kolem 16 000–17 000 (−54 %). Realističtější je střed mezi exp a recent, neboť exp model přestřeluje (viz sekce 5).
 </div>
 
 <figure class="chart">
@@ -287,9 +287,9 @@
     <tr><th>Model</th><th class="num">Predikce 2024</th><th class="num">Skutečnost</th><th class="num">Chyba</th><th class="num">90 % CI</th></tr>
   </thead>
   <tbody>
-    <tr><td>Exp</td>    <td class="num">42 209</td><td class="num">36 188</td><td class="num red">+16,6 %</td><td class="num">40 317 – 44 190 (✗ mimo)</td></tr>
-    <tr><td>Lin</td>    <td class="num">40 008</td><td class="num">36 188</td><td class="num ora">+10,6 %</td><td class="num">—</td></tr>
-    <tr><td>Recent (2)</td><td class="num">41 089</td><td class="num">36 188</td><td class="num ora">+13,5 %</td><td class="num">—</td></tr>
+    <tr><td>Exp</td>    <td class="num">42 220</td><td class="num">36 188</td><td class="num red">+16,7 %</td><td class="num">40 330 – 44 200 (✗ mimo)</td></tr>
+    <tr><td>Lin</td>    <td class="num">40 022</td><td class="num">36 188</td><td class="num ora">+10,6 %</td><td class="num">—</td></tr>
+    <tr><td>Recent (2)</td><td class="num">41 068</td><td class="num">36 188</td><td class="num ora">+13,5 %</td><td class="num">—</td></tr>
   </tbody>
 </table>
 
@@ -300,7 +300,7 @@
   <strong>Důsledek pro prognózu 2039:</strong> Bodové predikce (zejména exp) mohou být <em>příliš optimistické</em> — skutečnost bude pravděpodobně blíže recent/lin modelu (≈ 17 000 osob). CI exp by se mělo interpretovat jen jako spodní hranice nejistoty.
 </div>
 
-<p>Na úrovni farností je MAPE pro exp model 43,9 %, vážený MAPE 24,9 %, RMSE 59. Pro horizont 2039 (15 let) lze chybu očekávat ještě vyšší.</p>
+<p>Na úrovni farností je MAPE pro exp model 44,0 %, vážený MAPE 25,0 %, RMSE 59. Pro horizont 2039 (15 let) lze chybu očekávat ještě vyšší.</p>
 
 <!-- ═══════════════════════════════════════════════════════════ -->
 <h2 id="knezi">6. Kněží v diecézi</h2>
