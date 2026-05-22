@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Verze 2 — co se změnilo oproti první analýze</title>
+<title>Changelog — Statistická analýza DOO</title>
 <style>
   :root {
     --blue:   #2563eb;
@@ -40,10 +40,24 @@
 
 <p class="back"><a href="report.html">← Zpět na hlavní report</a></p>
 
-<h1>Verze 2 — co se změnilo oproti první analýze</h1>
+<h1>Changelog verzí analýzy</h1>
 
 <div class="changelog">
-  <strong>Verze 2 — co se změnilo oproti první analýze</strong>
+  <strong>Verze 3 — metodické opravy (květen 2026)</strong>
+  <ul>
+    <li>Kapacitní model nyní používá <strong>pouze platné predikce (validni=1)</strong>; farnosti s neplatným modelem dostávají explicitní fallback <em>last_known</em> nebo <em>fallback_zero</em> — sledováno sloupcem <code>vericich_zdroj</code>.</li>
+    <li>Nulové hodnoty ve sčítání jsou interpretovány jako <strong>skutečná nulová účast</strong>, nikoli chybějící data. Odděleny od NULL.</li>
+    <li>Predikční interval exp modelu je <strong>empiricky podkalibrovaný</strong> — leave-2024-out ukázal coverage 45 % místo deklarovaných 90 %. Interval slouží jen jako dolní hranice nejistoty.</li>
+    <li>Pokles po roce 2019 zrychlil <strong>na úrovni diecéze a ve většině děkanátů</strong>, ne nutně ve všech (Místek a Bruntál zaznamenaly zpomalení).</li>
+    <li>Opraveny ručně zapsané nesoulady v reportu: 146 farností bez vlastního faráře (dříve chybně 135), 92 farností s &lt; 30 věřícími (dříve „cca 40"), data kněží po děkanátech z DB.</li>
+    <li>Alokace kněží po děkanátech přešla na metodu největšího zbytku (přesný součet).</li>
+    <li>Opravena logická chyba v mapě (kontrola <code>lon</code> vs. <code>lat</code>).</li>
+    <li>Validace v3: segmentované metriky (validní/nevalidní, velikostní pásma), coverage 90 % CI, rolling holdout 1999–2014→2019.</li>
+  </ul>
+</div>
+
+<div class="changelog">
+  <strong>Verze 2 — rozšíření analýzy (květen 2026)</strong>
   <ul>
     <li>NULL hodnoty ve sčítání už nejsou mapovány na 0 — 100 farností s neúplnými řadami má nyní explicitně neplatnou predikci (flag <code>validni=0</code>).</li>
     <li>R² pro exp. model počítáme v log prostoru (konzistentně s OLS fitem).</li>
@@ -56,7 +70,7 @@
 </div>
 
 <footer>
-  <p>Zpracováno pomocí Claude Code (Anthropic) · květen 2026 · verze 2 (po validačním reportu)</p>
+  <p>Zpracováno pomocí Claude Code (Anthropic) · květen 2026</p>
 </footer>
 
 </body>
