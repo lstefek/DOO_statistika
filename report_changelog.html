@@ -43,8 +43,9 @@
 <h1>Changelog verzí analýzy</h1>
 
 <div class="changelog">
-  <strong>Verze 3 — metodické opravy (květen 2026)</strong>
+  <strong>Verze 3 — metodické opravy a rozšíření (květen 2026)</strong>
   <ul>
+    <li>Přidán čtvrtý predikční model <strong>Holt (tlumené exponenciální vyrovnání)</strong> — <code>damped_trend=True</code>, optimalizace přes MLE. Ve validaci dosahuje přesnosti srovnatelné s lin modelem (leave-2024-out: chyba +10,9 % na diecézní úrovni). Viditelný ve všech grafech jako fialová linie.</li>
     <li>Kapacitní model nyní používá <strong>pouze platné predikce (validni=1)</strong>; farnosti s neplatným modelem dostávají explicitní fallback <em>last_known</em> nebo <em>fallback_zero</em> — sledováno sloupcem <code>vericich_zdroj</code>.</li>
     <li>Nulové hodnoty ve sčítání jsou interpretovány jako <strong>skutečná nulová účast</strong>, nikoli chybějící data. Odděleny od NULL.</li>
     <li>Predikční interval exp modelu je <strong>empiricky podkalibrovaný</strong> — leave-2024-out ukázal coverage 45 % místo deklarovaných 90 %. Interval slouží jen jako dolní hranice nejistoty.</li>

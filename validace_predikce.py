@@ -19,8 +19,8 @@ import numpy as np
 
 from predikce import (
     ROKY_HISTORICKE, MIN_BODY, R2_PRAH, CI_Z,
-    fit_exp, fit_lin, fit_recent,
-    predikuj_exp, predikuj_lin,
+    fit_exp, fit_lin, fit_recent, fit_holt,
+    predikuj_exp, predikuj_lin, predikuj_holt,
 )
 
 DB_FILE  = Path(__file__).parent / "scitani.db"
@@ -72,10 +72,10 @@ def coverage(skutecnost: list, pred_lo: list, pred_hi: list) -> str:
 
 def fit_farnosti(
     conn, train_roky: list[int], holdout_rok: int
-) -> tuple[dict, dict, dict, dict, dict]:
+) -> tuple[dict, dict, dict, dict, dict, dict]:
     """
     Fituje modely na train_roky a predikuje holdout_rok.
-    Vrátí (pred_exp, pred_exp_lo, pred_exp_hi, pred_lin, pred_rec).
+    Vrátí (pred_exp, pred_exp_lo, pred_exp_hi, pred_lin, pred_rec, pred_holt).
     """
     cur = conn.cursor()
     cur.execute("""
@@ -86,7 +86,7 @@ def fit_farnosti(
     for far, rok, val in cur.fetchall():
         by_far.setdefault(far, {})[rok] = val
 
-    p_exp, p_exp_lo, p_exp_hi, p_lin, p_rec = {}, {}, {}, {}, {}
+    p_exp, p_exp_lo, p_exp_hi, p_lin, p_rec, p_hlt = {}, {}, {}, {}, {}, {}
     for far, rd in by_far.items():
         hod = [rd.get(r) for r in train_roky]
         rv = [r for r, h in zip(train_roky, hod) if h is not None]
@@ -106,7 +106,12 @@ def fit_farnosti(
             r = predikuj_exp(rc, holdout_rok)
             if r:
                 p_rec[far] = r[0]
-    return p_exp, p_exp_lo, p_exp_hi, p_lin, p_rec
+        ht = fit_holt(rv, hv)
+        if ht:
+            v = predikuj_holt(ht, holdout_rok)
+            if v is not None:
+                p_hlt[far] = v
+    return p_exp, p_exp_lo, p_exp_hi, p_lin, p_rec, p_hlt
 
 
 def skutecnost_farnost(conn, rok: int) -> dict[str, float]:
@@ -175,6 +180,7 @@ def validace_dieceze(conn, train_roky: list[int], holdout_rok: int) -> dict:
     ex = fit_exp(train_roky, train_hod)
     ln = fit_lin(train_roky, train_hod)
     rc = fit_recent(train_roky, train_hod, n_last=2)
+    ht = fit_holt(train_roky, train_hod)
 
     out = {"skutecnost": sk, "train_roky": train_roky, "train_hod": train_hod}
     if ex:
@@ -188,6 +194,11 @@ def validace_dieceze(conn, train_roky: list[int], holdout_rok: int) -> dict:
         r = predikuj_exp(rc, holdout_rok)
         out["recent"] = r[0]
         out["recent_chyba_pct"] = (r[0] - sk) / sk * 100
+    if ht:
+        v = predikuj_holt(ht, holdout_rok)
+        if v is not None:
+            out["holt"] = v
+            out["holt_chyba_pct"] = (v - sk) / sk * 100
     return out
 
 
@@ -222,10 +233,12 @@ def main() -> None:
         h(f"  Lin    : {diec['lin']:>8,.0f}  chyba={diec['lin_chyba_pct']:+.1f}%".replace(",", " "))
     if "recent" in diec:
         h(f"  Recent : {diec['recent']:>8,.0f}  chyba={diec['recent_chyba_pct']:+.1f}%".replace(",", " "))
+    if "holt" in diec:
+        h(f"  Holt   : {diec['holt']:>8,.0f}  chyba={diec['holt_chyba_pct']:+.1f}%".replace(",", " "))
     nl()
 
     # Farnosti — leave-2024-out
-    p_exp, p_lo, p_hi, p_lin, p_rec = fit_farnosti(conn, TRAIN, HOLDOUT)
+    p_exp, p_lo, p_hi, p_lin, p_rec, p_hlt = fit_farnosti(conn, TRAIN, HOLDOUT)
     skut = skutecnost_farnost(conn, HOLDOUT)
     seg  = nacti_segmenty(conn)
 
@@ -234,11 +247,12 @@ def main() -> None:
     e_arr  = [p_exp.get(f) for f in common]
     l_arr  = [p_lin.get(f) for f in common]
     r_arr  = [p_rec.get(f) for f in common]
+    h_arr  = [p_hlt.get(f) for f in common]
     lo_arr = [p_lo.get(f) for f in common]
     hi_arr = [p_hi.get(f) for f in common]
 
     h("## 2. FARNOSTI — leave-2024-out, celkové metriky")
-    for name, arr in (("Exp", e_arr), ("Lin", l_arr), ("Recent", r_arr)):
+    for name, arr in (("Exp", e_arr), ("Lin", l_arr), ("Recent", r_arr), ("Holt", h_arr)):
         h(f"  {name:<8}:" + fmt_metrics(metrics(s_arr, arr)))
     h(f"  Coverage 90% CI exp: {coverage(s_arr, lo_arr, hi_arr)}")
     nl()
@@ -287,20 +301,23 @@ def main() -> None:
         h(f"  Lin    : {diec2['lin']:>8,.0f}  chyba={diec2['lin_chyba_pct']:+.1f}%".replace(",", " "))
     if "recent" in diec2:
         h(f"  Recent : {diec2['recent']:>8,.0f}  chyba={diec2['recent_chyba_pct']:+.1f}%".replace(",", " "))
+    if "holt" in diec2:
+        h(f"  Holt   : {diec2['holt']:>8,.0f}  chyba={diec2['holt_chyba_pct']:+.1f}%".replace(",", " "))
     nl()
 
-    p_exp2, p_lo2, p_hi2, p_lin2, p_rec2 = fit_farnosti(conn, TRAIN2, HOLDOUT2)
+    p_exp2, p_lo2, p_hi2, p_lin2, p_rec2, p_hlt2 = fit_farnosti(conn, TRAIN2, HOLDOUT2)
     skut2 = skutecnost_farnost(conn, HOLDOUT2)
     common2 = sorted(set(p_exp2) & set(skut2))
-    s2 = [skut2[f] for f in common2]
-    e2 = [p_exp2.get(f) for f in common2]
-    l2 = [p_lin2.get(f) for f in common2]
-    r2 = [p_rec2.get(f) for f in common2]
+    s2  = [skut2[f] for f in common2]
+    e2  = [p_exp2.get(f) for f in common2]
+    l2  = [p_lin2.get(f) for f in common2]
+    r2  = [p_rec2.get(f) for f in common2]
+    h2  = [p_hlt2.get(f) for f in common2]
     lo2 = [p_lo2.get(f) for f in common2]
     hi2 = [p_hi2.get(f) for f in common2]
 
     h("## 5. FARNOSTI — rolling holdout (trénink 1999–2014, holdout 2019)")
-    for name, arr in (("Exp", e2), ("Lin", l2), ("Recent", r2)):
+    for name, arr in (("Exp", e2), ("Lin", l2), ("Recent", r2), ("Holt", h2)):
         h(f"  {name:<8}:" + fmt_metrics(metrics(s2, arr)))
     h(f"  Coverage 90% CI exp: {coverage(s2, lo2, hi2)}")
     nl()
@@ -319,8 +336,8 @@ def main() -> None:
                 (HOLDOUT,))
     dek_skut = {d: v for d, v in cur.fetchall()}
 
-    h(f"{'Děkanát':<14} {'Skut':>7} {'Exp':>7} {'Δ%':>7} {'Lin':>7} {'Δ%':>7} {'Rec':>7} {'Δ%':>7}")
-    h("-" * 70)
+    h(f"{'Děkanát':<14} {'Skut':>7} {'Exp':>7} {'Δ%':>7} {'Lin':>7} {'Δ%':>7} {'Rec':>7} {'Δ%':>7} {'Holt':>7} {'Δ%':>7}")
+    h("-" * 88)
     for d in sorted(dek_data):
         hod = [dek_data[d].get(r) for r in TRAIN]
         rv = [r for r, h_ in zip(TRAIN, hod) if h_ is not None]
@@ -331,13 +348,15 @@ def main() -> None:
         ex = fit_exp(rv, hv)
         ln = fit_lin(rv, hv)
         rc = fit_recent(rv, hv, n_last=2)
+        ht = fit_holt(rv, hv)
         ex_v = predikuj_exp(ex, HOLDOUT)[0] if ex else None
         ln_v = predikuj_lin(ln, HOLDOUT) if ln else None
         rc_v = predikuj_exp(rc, HOLDOUT)[0] if rc else None
+        ht_v = predikuj_holt(ht, HOLDOUT) if ht else None
 
         def fmt(v): return f"{v:>7.0f}" if v is not None else "      —"
         def err(v): return f"{(v-sk)/sk*100:+6.1f}%" if v is not None and sk else "      —"
-        h(f"{d:<14} {sk:>7.0f} {fmt(ex_v)} {err(ex_v)} {fmt(ln_v)} {err(ln_v)} {fmt(rc_v)} {err(rc_v)}")
+        h(f"{d:<14} {sk:>7.0f} {fmt(ex_v)} {err(ex_v)} {fmt(ln_v)} {err(ln_v)} {fmt(rc_v)} {err(rc_v)} {fmt(ht_v)} {err(ht_v)}")
     nl()
 
     # ── D. Kapacitní model — přehled zdrojů ──────────────────────────────────

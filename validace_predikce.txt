@@ -8,11 +8,13 @@ Skutečnost 2024: 36 188
   Poznámka: 90% CI exp modelu je empiricky podkalibrovaný — nezachycuje nejistotu parametrů ani strukturální zrychlení poklesu.
   Lin    :   40 022  chyba=+10.6%
   Recent :   41 068  chyba=+13.5%
+  Holt   :   40 143  chyba=+10.9%
 
 ## 2. FARNOSTI — leave-2024-out, celkové metriky
   Exp     :  n=261  MAPE=  44.0%  wMAPE=  25.0%  RMSE=  59.4  bias=+24.4  medAPE=  27.2%  nadhodnoceno= 73.6%
   Lin     :  n=261  MAPE=  48.6%  wMAPE=  26.6%  RMSE=  66.0  bias=+12.4  medAPE=  28.2%  nadhodnoceno= 65.1%
   Recent  :  n=261  MAPE=  77.6%  wMAPE=  36.5%  RMSE= 160.5  bias=+31.7  medAPE=  30.8%  nadhodnoceno= 58.6%
+  Holt    :  n=259  MAPE=  49.0%  wMAPE=  25.6%  RMSE=  61.8  bias=+15.0  medAPE=  25.0%  nadhodnoceno= 62.9%
   Coverage 90% CI exp: 123/274 (44.9 %)
 
 ## 3. FARNOSTI — segmentované metriky (exp model, leave-2024-out)
@@ -38,27 +40,29 @@ Skutečnost 2019: 46 568
   Exp    :   48 541  CI=[46 309; 50 881]  chyba=+4.2%  ✓ v CI
   Lin    :   47 127  chyba=+1.2%
   Recent :   45 038  chyba=-3.3%
+  Holt   :   47 214  chyba=+1.4%
 
 ## 5. FARNOSTI — rolling holdout (trénink 1999–2014, holdout 2019)
   Exp     :  n=269  MAPE=  49.7%  wMAPE=  20.7%  RMSE=  65.0  bias=+10.0  medAPE=  23.0%  nadhodnoceno= 61.7%
   Lin     :  n=269  MAPE=  50.9%  wMAPE=  23.7%  RMSE=  84.4  bias=-0.1  medAPE=  25.6%  nadhodnoceno= 55.0%
   Recent  :  n=269  MAPE=  69.0%  wMAPE=  22.4%  RMSE=  66.3  bias=+1.0  medAPE=  25.0%  nadhodnoceno= 53.9%
+  Holt    :  n=264  MAPE=  51.4%  wMAPE=  20.9%  RMSE=  62.2  bias=+0.5  medAPE=  24.2%  nadhodnoceno= 54.9%
   Coverage 90% CI exp: 116/271 (42.8 %)
 
 ## 6. DĚKANÁTY — leave-2024-out
-Děkanát           Skut     Exp      Δ%     Lin      Δ%     Rec      Δ%
-----------------------------------------------------------------------
-Bruntál            582     743  +27.7%     688  +18.2%     569   -2.3%
-Bílovec           1676    1996  +19.1%    1948  +16.2%    2065  +23.2%
-Frýdek            7436    7932   +6.7%    7705   +3.6%    7823   +5.2%
-Hlučín            6999    8354  +19.4%    7824  +11.8%    7856  +12.2%
-Jeseník            714    1042  +45.9%    1046  +46.5%     839  +17.4%
-Karviná           3985    4695  +17.8%    4149   +4.1%    5010  +25.7%
-Krnov              507     680  +34.2%     649  +28.0%     612  +20.7%
-Místek            2746    3196  +16.4%    3106  +13.1%    2655   -3.3%
-Nový Jičín        3203    3579  +11.7%    3316   +3.5%    3777  +17.9%
-Opava             3908    4562  +16.7%    4182   +7.0%    4219   +8.0%
-Ostrava           4432    5544  +25.1%    5410  +22.1%    5799  +30.9%
+Děkanát           Skut     Exp      Δ%     Lin      Δ%     Rec      Δ%    Holt      Δ%
+----------------------------------------------------------------------------------------
+Bruntál            582     743  +27.7%     688  +18.2%     569   -2.3%     725  +24.6%
+Bílovec           1676    1996  +19.1%    1948  +16.2%    2065  +23.2%    2082  +24.2%
+Frýdek            7436    7932   +6.7%    7705   +3.6%    7823   +5.2%    7722   +3.8%
+Hlučín            6999    8354  +19.4%    7824  +11.8%    7856  +12.2%    7851  +12.2%
+Jeseník            714    1042  +45.9%    1046  +46.5%     839  +17.4%    1047  +46.6%
+Karviná           3985    4695  +17.8%    4149   +4.1%    5010  +25.7%    4567  +14.6%
+Krnov              507     680  +34.2%     649  +28.0%     612  +20.7%     651  +28.4%
+Místek            2746    3196  +16.4%    3106  +13.1%    2655   -3.3%    2498   -9.0%
+Nový Jičín        3203    3579  +11.7%    3316   +3.5%    3777  +17.9%    3614  +12.8%
+Opava             3908    4562  +16.7%    4182   +7.0%    4219   +8.0%    4036   +3.3%
+Ostrava           4432    5544  +25.1%    5410  +22.1%    5799  +30.9%    5419  +22.3%
 
 ## 7. KAPACITNÍ MODEL — věřící podle zdroje (rok > 2024)
    Rok  Zdroj                      Farnosti    Věřících

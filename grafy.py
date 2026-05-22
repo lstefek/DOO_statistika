@@ -30,6 +30,7 @@ BARVA_HIST = "#2563eb"
 BARVA_EXP  = "#dc2626"
 BARVA_LIN  = "#16a34a"
 BARVA_REC  = "#f59e0b"
+BARVA_HOLT = "#7c3aed"
 
 plt.rcParams.update({
     "font.family": "DejaVu Sans",
@@ -46,7 +47,7 @@ def nacti(conn, sql, params=()):
 
 
 def kresli_predikci(ax, hist_roky, hist_hod, pred_roky, exp_hod, exp_lo, exp_hi,
-                    lin_hod, recent_hod, nazev, show_recent=True):
+                    lin_hod, recent_hod, holt_hod, nazev, show_recent=True):
     """Vykreslí historii + obě/tři predikce. Skutečnost s NaN pro NULL roky."""
     # Historie (NaN namísto None pro správný matplotlib render)
     hist_y = [h if h is not None else np.nan for h in hist_hod]
@@ -87,6 +88,12 @@ def kresli_predikci(ax, hist_roky, hist_hod, pred_roky, exp_hod, exp_lo, exp_hi,
         ax.plot(all_pred, rec_full, "v:", color=BARVA_REC, lw=1.5, ms=4,
                 label="Recent (lokální)")
 
+    # Holt (tlumené exponenciální vyrovnání)
+    if holt_hod is not None and any(v is not None for v in holt_hod):
+        hlt_full = [posl_hod] + list(holt_hod)
+        ax.plot(all_pred, hlt_full, "D--", color=BARVA_HOLT, lw=1.5, ms=4,
+                label="Holt (tlumený)")
+
     ax.axvline(2024.5, color="gray", lw=0.8, ls=":")
     ax.set_title(nazev, fontsize=11, fontweight="bold")
     ax.set_xticks(VSECHNY)
@@ -98,7 +105,7 @@ def kresli_predikci(ax, hist_roky, hist_hod, pred_roky, exp_hod, exp_lo, exp_hi,
 # ── 1. DIECÉZE ────────────────────────────────────────────────────────────────
 def graf_dieceze(conn):
     rows = nacti(conn,
-        "SELECT rok, hodnota, exp_val, exp_lo, exp_hi, lin_val, recent_val "
+        "SELECT rok, hodnota, exp_val, exp_lo, exp_hi, lin_val, recent_val, holt_val "
         "FROM predikce_dieceze ORDER BY rok")
     hist_r = [r[0] for r in rows if r[1] is not None]
     hist_h = [r[1] for r in rows if r[1] is not None]
@@ -108,13 +115,14 @@ def graf_dieceze(conn):
     exp_hi = [r[4] for r in rows if r[2] is not None]
     lin_h  = [r[5] for r in rows if r[5] is not None]
     rec_h  = [r[6] for r in rows if r[6] is not None]
-    # Doplň lin a rec na stejnou délku jako pred_r (pokud jeden chybí, je vše None)
+    hlt_h  = [r[7] for r in rows if r[7] is not None]
     while len(lin_h) < len(pred_r): lin_h.append(None)
     while len(rec_h) < len(pred_r): rec_h.append(None)
+    while len(hlt_h) < len(pred_r): hlt_h.append(None)
 
     fig, ax = plt.subplots(figsize=(9, 5))
     kresli_predikci(ax, hist_r, hist_h, pred_r,
-                    exp_h, exp_lo, exp_hi, lin_h, rec_h,
+                    exp_h, exp_lo, exp_hi, lin_h, rec_h, hlt_h,
                     "Diecéze ostravsko-opavská — návštěvnost nedělních bohoslužeb")
     ax.set_ylabel("Počet účastníků")
     ax.legend(loc="upper right", fontsize=8)
@@ -137,7 +145,7 @@ def graf_dekanaty(conn):
 
     for i, dek in enumerate(dekanaty):
         rows = nacti(conn,
-            "SELECT rok, hodnota, exp_val, exp_lo, exp_hi, lin_val, recent_val "
+            "SELECT rok, hodnota, exp_val, exp_lo, exp_hi, lin_val, recent_val, holt_val "
             "FROM predikce_dekanat WHERE dekanat=? ORDER BY rok", (dek,))
         hist_r = [r[0] for r in rows if r[1] is not None]
         hist_h = [r[1] for r in rows if r[1] is not None]
@@ -147,10 +155,12 @@ def graf_dekanaty(conn):
         exp_hi = [r[4] for r in rows if r[2] is not None]
         lin_h  = [r[5] for r in rows if r[5] is not None]
         rec_h  = [r[6] for r in rows if r[6] is not None]
+        hlt_h  = [r[7] for r in rows if r[7] is not None]
         while len(lin_h) < len(pred_r): lin_h.append(None)
         while len(rec_h) < len(pred_r): rec_h.append(None)
+        while len(hlt_h) < len(pred_r): hlt_h.append(None)
         kresli_predikci(axes_flat[i], hist_r, hist_h, pred_r,
-                        exp_h, exp_lo, exp_hi, lin_h, rec_h, dek)
+                        exp_h, exp_lo, exp_hi, lin_h, rec_h, hlt_h, dek)
 
     for j in range(len(dekanaty), len(axes_flat)):
         axes_flat[j].set_visible(False)
@@ -181,28 +191,29 @@ def graf_farnosti_nj(conn):
 
     for i, far in enumerate(farnosti):
         rows = nacti(conn,
-            "SELECT rok, hodnota, exp_val, exp_lo, exp_hi, lin_val, validni "
+            "SELECT rok, hodnota, exp_val, exp_lo, exp_hi, lin_val, holt_val, validni "
             "FROM predikce_farnost WHERE farnost=? ORDER BY rok", (far,))
         hist_r = [r[0] for r in rows if r[1] is not None]
         hist_h = [r[1] for r in rows if r[1] is not None]
 
         # Validní predikce? Pokud ne, kreslíme jen historii
-        validni_flag = any(r[6] == 1 for r in rows if r[6] is not None)
+        validni_flag = any(r[7] == 1 for r in rows if r[7] is not None)
         if validni_flag:
             pred_r = [r[0] for r in rows if r[2] is not None]
             exp_h  = [r[2] for r in rows if r[2] is not None]
             exp_lo = [r[3] for r in rows if r[2] is not None]
             exp_hi = [r[4] for r in rows if r[2] is not None]
             lin_h  = [r[5] for r in rows if r[5] is not None]
+            hlt_h  = [r[6] for r in rows if r[6] is not None]
         else:
-            pred_r, exp_h, exp_lo, exp_hi, lin_h = [], [], [], [], []
+            pred_r, exp_h, exp_lo, exp_hi, lin_h, hlt_h = [], [], [], [], [], []
         while len(lin_h) < len(pred_r): lin_h.append(None)
+        while len(hlt_h) < len(pred_r): hlt_h.append(None)
 
         ax = axes_flat[i]
-        title = far if validni_flag else far
         kresli_predikci(ax, hist_r, hist_h, pred_r,
-                        exp_h, exp_lo, exp_hi, lin_h, None,
-                        title, show_recent=False)
+                        exp_h, exp_lo, exp_hi, lin_h, None, hlt_h,
+                        far, show_recent=False)
         if not validni_flag:
             ax.set_facecolor("#f3f4f6")
             ax.text(0.5, 0.5, "predikce\nneplatná", transform=ax.transAxes,
@@ -230,7 +241,8 @@ def graf_srovnani_dekanaty(conn):
                MAX(CASE WHEN rok=2024 THEN hodnota END) AS h2024,
                MAX(CASE WHEN rok=2039 THEN exp_val  END) AS exp2039,
                MAX(CASE WHEN rok=2039 THEN lin_val  END) AS lin2039,
-               MAX(CASE WHEN rok=2039 THEN recent_val END) AS rec2039
+               MAX(CASE WHEN rok=2039 THEN recent_val END) AS rec2039,
+               MAX(CASE WHEN rok=2039 THEN holt_val END) AS hlt2039
         FROM predikce_dekanat
         GROUP BY dekanat
         ORDER BY h2024 DESC
@@ -240,14 +252,16 @@ def graf_srovnani_dekanaty(conn):
     exp2039  = [r[2] or 0 for r in rows]
     lin2039  = [r[3] or 0 for r in rows]
     rec2039  = [r[4] or 0 for r in rows]
+    hlt2039  = [r[5] or 0 for r in rows]
 
     x = np.arange(len(dekanaty))
-    w = 0.21
-    fig, ax = plt.subplots(figsize=(12, 5))
-    ax.bar(x - 1.5*w, h2024,   width=w, label="2024 (skutečnost)", color=BARVA_HIST, alpha=0.85)
-    ax.bar(x - 0.5*w, exp2039, width=w, label="2039 exp",     color=BARVA_EXP,  alpha=0.85)
-    ax.bar(x + 0.5*w, lin2039, width=w, label="2039 lin",     color=BARVA_LIN,  alpha=0.85)
-    ax.bar(x + 1.5*w, rec2039, width=w, label="2039 recent",  color=BARVA_REC,  alpha=0.85)
+    w = 0.16
+    fig, ax = plt.subplots(figsize=(13, 5))
+    ax.bar(x - 2*w,   h2024,   width=w, label="2024 (skutečnost)", color=BARVA_HIST, alpha=0.85)
+    ax.bar(x - 1*w,   exp2039, width=w, label="2039 exp",     color=BARVA_EXP,  alpha=0.85)
+    ax.bar(x,         lin2039, width=w, label="2039 lin",     color=BARVA_LIN,  alpha=0.85)
+    ax.bar(x + 1*w,   rec2039, width=w, label="2039 recent",  color=BARVA_REC,  alpha=0.85)
+    ax.bar(x + 2*w,   hlt2039, width=w, label="2039 Holt",    color=BARVA_HOLT, alpha=0.85)
     ax.set_xticks(x)
     ax.set_xticklabels(dekanaty, rotation=30, ha="right")
     ax.yaxis.set_major_formatter(
