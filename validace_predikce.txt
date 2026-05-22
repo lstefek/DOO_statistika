@@ -1,20 +1,51 @@
-=== Leave-2024-out validace predikčního modelu ===
+=== Leave-2024-out validace predikčního modelu — verze 3 ===
 
-## DIECÉZE
-Trénink: roky [1999, 2004, 2009, 2014, 2019]
-Trénink hodnoty: [73266, 67108, 61911, 52805, 46568]
+## 1. DIECÉZE — leave-2024-out
+Trénink: [1999, 2004, 2009, 2014, 2019]  →  predikce 2024
 Skutečnost 2024: 36 188
 
-  Exp model     : 42,220  CI=[40,330; 44,200]  chyba=+16.7%  v CI=✗
-  Lin model     : 40,022  chyba=+10.6%
-  Recent (2b)   : 41,068  chyba=+13.5%
+  Exp    :   42 220  CI=[40 330; 44 200]  chyba=+16.7%  ✗ MIMO CI
+  Poznámka: 90% CI exp modelu je empiricky podkalibrovaný — nezachycuje nejistotu parametrů ani strukturální zrychlení poklesu.
+  Lin    :   40 022  chyba=+10.6%
+  Recent :   41 068  chyba=+13.5%
 
-## FARNOSTI (n=274)
-  Exp      n=261  MAPE=  44.0%  wMAPE=  25.0%  RMSE=  59.4  bias=+24.4
-  Lin      n=261  MAPE=  48.6%  wMAPE=  26.6%  RMSE=  66.0  bias=+12.4
-  Recent   n=261  MAPE=  77.6%  wMAPE=  36.5%  RMSE= 160.5  bias=+31.7
+## 2. FARNOSTI — leave-2024-out, celkové metriky
+  Exp     :  n=261  MAPE=  44.0%  wMAPE=  25.0%  RMSE=  59.4  bias=+24.4  medAPE=  27.2%  nadhodnoceno= 73.6%
+  Lin     :  n=261  MAPE=  48.6%  wMAPE=  26.6%  RMSE=  66.0  bias=+12.4  medAPE=  28.2%  nadhodnoceno= 65.1%
+  Recent  :  n=261  MAPE=  77.6%  wMAPE=  36.5%  RMSE= 160.5  bias=+31.7  medAPE=  30.8%  nadhodnoceno= 58.6%
+  Coverage 90% CI exp: 123/274 (44.9 %)
 
-## DĚKANÁTY
+## 3. FARNOSTI — segmentované metriky (exp model, leave-2024-out)
+  Validní predikce (validni=1):
+  n=173  MAPE=  29.9%  wMAPE=  20.1%  RMSE=  56.0  bias=+25.3  medAPE=  21.5%  nadhodnoceno= 72.8%  coverage=81/177 (45.8 %)
+  Nevalidní predikce (validni=0):
+  n= 88  MAPE=  71.6%  wMAPE=  46.5%  RMSE=  65.5  bias=+22.6  medAPE=  40.6%  nadhodnoceno= 75.0%  coverage=42/97 (43.3 %)
+  Farnosti s alespoň jednou nulou v historii:
+  (žádná data)  coverage=0/13 (0.0 %)
+  Velikost 2024 = 0:
+  (žádná data)  coverage=0/13 (0.0 %)
+  Velikost 2024 = 1–29:
+  n= 76  MAPE=  65.2%  wMAPE=  55.0%  RMSE=  15.9  bias=+5.5  medAPE=  33.6%  nadhodnoceno= 65.8%  coverage=44/76 (57.9 %)
+  Velikost 2024 = 30–99:
+  n= 90  MAPE=  44.1%  wMAPE=  39.7%  RMSE=  36.6  bias=+17.2  medAPE=  28.0%  nadhodnoceno= 74.4%  coverage=42/90 (46.7 %)
+  Velikost 2024 ≥ 100:
+  n= 95  MAPE=  26.8%  wMAPE=  21.3%  RMSE=  90.6  bias=+46.4  medAPE=  20.1%  nadhodnoceno= 78.9%  coverage=37/95 (38.9 %)
+
+## 4. DIECÉZE — rolling holdout (trénink 1999–2014, holdout 2019)
+Trénink: [1999, 2004, 2009, 2014]  →  predikce 2019
+Skutečnost 2019: 46 568
+
+  Exp    :   48 541  CI=[46 309; 50 881]  chyba=+4.2%  ✓ v CI
+  Lin    :   47 127  chyba=+1.2%
+  Recent :   45 038  chyba=-3.3%
+
+## 5. FARNOSTI — rolling holdout (trénink 1999–2014, holdout 2019)
+  Exp     :  n=269  MAPE=  49.7%  wMAPE=  20.7%  RMSE=  65.0  bias=+10.0  medAPE=  23.0%  nadhodnoceno= 61.7%
+  Lin     :  n=269  MAPE=  50.9%  wMAPE=  23.7%  RMSE=  84.4  bias=-0.1  medAPE=  25.6%  nadhodnoceno= 55.0%
+  Recent  :  n=269  MAPE=  69.0%  wMAPE=  22.4%  RMSE=  66.3  bias=+1.0  medAPE=  25.0%  nadhodnoceno= 53.9%
+  Coverage 90% CI exp: 116/271 (42.8 %)
+
+## 6. DĚKANÁTY — leave-2024-out
 Děkanát           Skut     Exp      Δ%     Lin      Δ%     Rec      Δ%
 ----------------------------------------------------------------------
 Bruntál            582     743  +27.7%     688  +18.2%     569   -2.3%
@@ -29,8 +60,56 @@ Nový Jičín        3203    3579  +11.7%    3316   +3.5%    3777  +17.9%
 Opava             3908    4562  +16.7%    4182   +7.0%    4219   +8.0%
 Ostrava           4432    5544  +25.1%    5410  +22.1%    5799  +30.9%
 
-## Interpretace
-- MAPE napříč farnostmi pro exp model říká: typicky se 5-letá predikce
-  liší o tuto hodnotu %. Pro horizont 2039 (15 let) může chyba lineárně růst.
-- Pokud je 'v CI' = ✓ na diecézní úrovni, predikční interval funguje.
-- bias > 0 = model nadhodnocuje skutečnost (predikce ≥ skutečnost).
+## 7. KAPACITNÍ MODEL — věřící podle zdroje (rok > 2024)
+   Rok  Zdroj                      Farnosti    Věřících
+  -------------------------------------------------------
+  2027  fallback_last_known              88       6 638
+  2027  fallback_zero                    12           0
+  2027  model_valid                     177      28 702
+  2029  fallback_last_known              88       6 638
+  2029  fallback_zero                    12           0
+  2029  model_valid                     177      27 062
+  2031  fallback_last_known              88       6 638
+  2031  fallback_zero                    12           0
+  2031  model_valid                     177      25 530
+  2034  fallback_last_known              88       6 638
+  2034  fallback_zero                    12           0
+  2034  model_valid                     177      23 417
+  2037  fallback_last_known              88       6 638
+  2037  fallback_zero                    12           0
+  2037  model_valid                     177      21 505
+  2039  fallback_last_known              88       6 638
+  2039  fallback_zero                    12           0
+  2039  model_valid                     177      20 332
+
+  Akceptační kritérium — invalid_used_as_valid = 0 (OK)
+
+## 8. FARNOSTI S NULOVOU ÚČASTÍ V POSLEDNÍM ROCE (2024)
+  Farnost                               Děk  v2024  exp2039  validni model_type
+  --------------------------------------------------------------------------------
+  Žulová                            Jeseník      0       18        0  fallback_zero
+  Křišťanovice                      Bruntál      0       11        0  fallback_zero
+  Rešov                             Bruntál      0        4        0  fallback_zero
+  Brantice                            Krnov      0        3        1  exp_log_positive
+  Horní Domašov                     Jeseník      0        2        1  exp_log_positive
+  Bílčice                           Bruntál      0        1        0  fallback_zero
+  Ruda u Rýmařova                   Bruntál      0        1        1  exp_log_positive
+  Široká Niva                         Krnov      0        1        0  fallback_zero
+  Dětřichov nad Bystřicí            Bruntál      0        0        0  fallback_zero
+  Mezina                            Bruntál      0        0        0  fallback_zero
+  Moravský Kočov                    Bruntál      0        0        0  fallback_zero
+  Nové Valteřice                    Bruntál      0        0        0  fallback_zero
+  Bílý Potok                        Jeseník      0        0        1  exp_log_positive
+  Travná                            Jeseník      0        0        0  fallback_zero
+  Zálesí                            Jeseník      0        0        0  fallback_zero
+  Býkov                               Krnov      0        0        0  fallback_zero
+
+## 9. INTERPRETACE A OMEZENÍ
+- MAPE a wMAPE jsou vypočítány pouze pro farnosti se skutečností > 0.
+- Segmentace odhaluje výrazný rozdíl: nevalidní predikce mají výrazně vyšší chybu.
+- Coverage 90% CI exp modelu ukazuje, zda interval byl kalibrovaný.
+- Pokud coverage << 90 %, CI je podkalibrovaný (příliš úzký).
+- Rolling holdout (1999–2014→2019) testuje 5-letou extrapolaci dříve v čase.
+- bias > 0 = model nadhodnocuje skutečnost.
+- Kapacitní model v3 používá POUZE validní predikce (validni=1); nevalidní
+  farnosti dostanou fallback last_known nebo fallback_zero.
