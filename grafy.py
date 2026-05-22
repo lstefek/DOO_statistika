@@ -198,10 +198,16 @@ def graf_farnosti_nj(conn):
             pred_r, exp_h, exp_lo, exp_hi, lin_h = [], [], [], [], []
         while len(lin_h) < len(pred_r): lin_h.append(None)
 
-        title = far if validni_flag else f"{far} (predikce neplatná)"
-        kresli_predikci(axes_flat[i], hist_r, hist_h, pred_r,
+        ax = axes_flat[i]
+        title = far if validni_flag else far
+        kresli_predikci(ax, hist_r, hist_h, pred_r,
                         exp_h, exp_lo, exp_hi, lin_h, None,
                         title, show_recent=False)
+        if not validni_flag:
+            ax.set_facecolor("#f3f4f6")
+            ax.text(0.5, 0.5, "predikce\nneplatná", transform=ax.transAxes,
+                    ha="center", va="center", fontsize=9, color="#6b7280",
+                    style="italic", alpha=0.9)
 
     for j in range(len(farnosti), len(axes_flat)):
         axes_flat[j].set_visible(False)
