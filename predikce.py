@@ -251,19 +251,22 @@ def main() -> None:
     """)
     cur.execute("""
         CREATE TABLE predikce_farnost_model (
-            farnost   TEXT PRIMARY KEY,
-            exp_a     REAL,
-            exp_b     REAL,
-            exp_n     INTEGER,
-            r2_exp_log REAL,
-            sigma_log REAL,
-            lin_a     REAL,
-            lin_b     REAL,
-            r2_lin    REAL,
-            recent_a  REAL,
-            recent_b  REAL,
-            validni   INTEGER,
-            duvod_invaliditn TEXT
+            farnost          TEXT PRIMARY KEY,
+            exp_a            REAL,
+            exp_b            REAL,
+            exp_n            INTEGER,
+            r2_exp_log       REAL,
+            sigma_log        REAL,
+            lin_a            REAL,
+            lin_b            REAL,
+            r2_lin           REAL,
+            recent_a         REAL,
+            recent_b         REAL,
+            validni          INTEGER,
+            duvod_invaliditn TEXT,
+            zero_count       INTEGER,
+            last_value       REAL,
+            model_type       TEXT
         )
     """)
 
@@ -322,6 +325,19 @@ def main() -> None:
         hod = [rok_data.get(r) for r in ROKY_HISTORICKE]
         res = zpracuj_skupinu(ROKY_HISTORICKE, hod)
 
+        # Metadata o nulách (nula = skutečná nulová účast, ne chybějící hodnota)
+        zero_count = sum(1 for h in hod if h is not None and h == 0)
+        nn = [h for h in hod if h is not None]
+        last_value = nn[-1] if nn else None
+        if res["validni"] == 1:
+            model_type = "exp_log_positive"
+        elif last_value is not None and last_value == 0:
+            model_type = "fallback_zero"
+        elif last_value is not None and last_value > 0:
+            model_type = "fallback_last_known"
+        else:
+            model_type = "fallback_no_data"
+
         for rok in ROKY_HISTORICKE:
             cur.execute("INSERT INTO predikce_farnost VALUES (?,?,?,?,?,?,?,?,?,?,?)",
                         (farnost, rok, rok_data.get(rok),
@@ -336,7 +352,7 @@ def main() -> None:
                          res["validni"]))
 
         # Tabulka modelů (1 řádek na farnost)
-        cur.execute("INSERT INTO predikce_farnost_model VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        cur.execute("INSERT INTO predikce_farnost_model VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                     (farnost,
                      res["exp"]["a"]     if res.get("exp") else None,
                      res["exp"]["b"]     if res.get("exp") else None,
@@ -349,7 +365,8 @@ def main() -> None:
                      res["recent"]["a"]  if res.get("recent") else None,
                      res["recent"]["b"]  if res.get("recent") else None,
                      res["validni"],
-                     res.get("duvod")))
+                     res.get("duvod"),
+                     zero_count, last_value, model_type))
 
         n_validni += res["validni"]
         n_invalidni += 1 - res["validni"]

@@ -65,7 +65,7 @@ def generuj_mapu(conn, rok: int, knezi_map: dict) -> Path:
         FROM kapacitni_model km
         JOIN farnosti_souradnice fs ON fs.farnost = km.farnost
         WHERE km.rok = ?
-          AND fs.lat IS NOT NULL
+          AND fs.lat IS NOT NULL AND fs.lon IS NOT NULL
         ORDER BY km.stav, km.vericich DESC
     """, (rok,)).fetchall()
 
@@ -78,7 +78,7 @@ def generuj_mapu(conn, rok: int, knezi_map: dict) -> Path:
     bez_gps = conn.execute("""
         SELECT km.farnost FROM kapacitni_model km
         LEFT JOIN farnosti_souradnice fs ON fs.farnost = km.farnost
-        WHERE km.rok = ? AND (fs.lat IS NULL OR fs.lat IS NULL)
+        WHERE km.rok = ? AND (fs.lat IS NULL OR fs.lon IS NULL)
     """, (rok,)).fetchall()
     if bez_gps:
         print(f"  ⚠ {len(bez_gps)} farností bez GPS v mapě {rok}: "
