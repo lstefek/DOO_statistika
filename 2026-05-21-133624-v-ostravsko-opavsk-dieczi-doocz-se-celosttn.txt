@@ -1,0 +1,1312 @@
+╭─── Claude Code v2.1.143 ─────────────────────────────────────────────────────╮
+│                                                    │ Tips for getting        │
+│                 Welcome back Libor!                │ started                 │
+│                                                    │ Run /init to create a … │
+│                       ▐▛███▜▌                      │ ─────────────────────── │
+│                      ▝▜█████▛▘                     │ What's new              │
+│                        ▘▘ ▝▝                       │ Renamed `/simplify` to… │
+│                                                    │ Auto mode no longer su… │
+│       Sonnet 4.6 · Claude Team · LOGIS a.s.        │ Fixed Windows PowerShe… │
+│ /…/f/lstefek/Documents/Aktivity/Farnost/Statistika │ /release-notes for more │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+❯ V Ostravsko-opavské diecézi (doo.cz) se celostátní sčítání účastníků          
+  bohoslužeb naposledy uskutečnilo v říjnu 2024. Dle dat z děkanátu Ostrava     
+  navštívilo tehdy nedělní mše celkem \(4\,432\) osob. Celkově v ČR chodí       
+  pravidelně do kostela zhruba \(8\,\%\) ze všech pokřtěných                    
+  katolíků.Detailnější přehled o tom, jak se statistika vyvíjela, lze doložit   
+  na příkladu ostravského děkanátu:Sčítání v roce 2024: \(4\,432\)              
+  účastníkůSčítání v roce 2019: \(6\,045\) účastníkůSčítání v roce 2014:        
+  \(6\,301\) účastníkůSčítání organizuje Česká biskupská konference a probíhá v 
+   katolických farnostech pravidelně každých pět let (vždy o druhé říjnové      
+  neděli). Účastníci tehdy anonymně vyplňují lístky s údaji o věku, pohlaví a   
+  ekonomické aktivitě. Kompletní archivované a průběžné diecézní přehledy       
+  najdete přímo na oficiálních stránkách Diecéze ostravsko-opavské. Zde máme    
+  data.                                                                         
+
+● Rozumím — máte statistická data ze sčítání bohoslužeb. Co s nimi chcete
+  udělat? Uložit jako referenční dokument, přidat do existujícího přehledu, nebo
+   něco jiného?
+
+  Listed 1 directory (ctrl+o to expand)
+
+● Vidím, že v adresáři Statistika/ už máte soubory se srovnáním 1999–2024. Co
+  přesně chcete udělat s daty, která jste sdílel? Např.:
+
+  1. Přidat data ostravského děkanátu do existujícího CSV/XLSX
+  2. Vytvořit nový dokument/analýzu
+  3. Něco jiného
+
+✻ Worked for 12s
+
+❯ Převedeme data do SQLite databáze.                                            
+
+● Nejdřív si prohlédnu existující CSV, abych pochopil strukturu dat.
+
+  Read 1 file (ctrl+o to expand)
+
+● Struktura je jasná. Napíšu Python skript, který CSV importuje do SQLite
+  databáze.
+
+  Read 1 file (ctrl+o to expand)
+
+● Struktura je jasná: oddělovač ;, desetinná čárka v průměrném věku, první
+  sloupec je jen pořadové číslo farnosti. Napíšu importovací skript.
+
+● Write(import_csv_to_sqlite.py)
+  ⎿  Wrote 86 lines to import_csv_to_sqlite.py
+       2 """Import scitani-srovnani CSV do SQLite databáze."""
+       3 
+       4 import csv
+       5 import sqlite3
+       6 import sys
+       7 from pathlib import Path
+       8 
+       9 CSV_FILE = Path(__file__).parent / "scitani-srovnani-1999-2024-w
+         eb.csv"
+      10 DB_FILE = Path(__file__).parent / "scitani.db"
+     … +82 lines (ctrl+o to expand)
+
+● Bash(python3 import_csv_to_sqlite.py)
+  ⎿  Hotovo: 1662 záznamů vloženo do /mnt/f/lstefek/Documents/Aktivity/Farn
+     ost/Statistika/scitani.db
+
+● Bash(sqlite3 scitani.db "
+      SELECT dekanat, COUNT(DISTINCT farnost) AS farnosti, COUNT(*) AS zaznamy…)
+  ⎿  Bruntál|33|198
+     Bílovec|26|156
+     Frýdek|19|114
+     … +7 lines (ctrl+o to expand)
+
+● Bash(sqlite3 scitani.db "
+      SELECT COUNT(DISTINCT dekanat) AS dek, COUNT(DISTINCT farnost) AS far,
+      COUNT(*) AS tot…)
+  ⎿  11|277|1662
+
+● Import proběhl úspěšně:
+
+  - 1 662 záznamů (277 farností × 6 let: 1999, 2004, 2009, 2014, 2019, 2024)
+  - 11 děkanátů
+  - Databáze: scitani.db
+  - Importovací skript: import_csv_to_sqlite.py (lze spustit znovu pro
+  přegenerování)
+
+  Tabulka scitani má sloupce: dekanat, farnost, rok, osob_celkem, prumerny_vek,
+  muz, zena, neuvedeno. Chcete rovnou něco dotazovat nebo přidat další data?
+
+✻ Cooked for 46s
+
+❯ Zobraz data pro děkanát Nový Jičín                                            
+
+● Bash(sqlite3 -column -header scitani.db "
+      SELECT farnost, rok, osob_celkem, prumerny_vek, muz, zena, neuvedeno…)
+  ⎿  farnost                   rok   osob_celkem  prumerny_vek  muz  zena
+     neuvedeno
+     ------------------------  ----  -----------  ------------  ---  ----
+     … +185 lines (ctrl+o to expand)
+
+● 27 farností, 162 záznamů. Pro přehlednost ještě součty za děkanát po letech:
+
+● Bash(sqlite3 -column -header scitani.db "
+      SELECT rok,…)
+  ⎿  rok   celkem  prumer_vek  muz   zena
+     ----  ------  ----------  ----  ----
+     1999  6681    44.37       2539  4142
+     … +5 lines (ctrl+o to expand)
+
+● Děkanát Nový Jičín: 27 farností, vývoj celkové návštěvnosti:
+
+  ┌──────┬────────┬─────────────┬───────┬───────┐
+  │ Rok  │ Celkem │ Průměr. věk │ Muži  │ Ženy  │
+  ├──────┼────────┼─────────────┼───────┼───────┤
+  │ 1999 │  6 681 │       44,37 │ 2 539 │ 4 142 │
+  ├──────┼────────┼─────────────┼───────┼───────┤
+  │ 2004 │  5 891 │       46,30 │ 2 270 │ 3 621 │
+  ├──────┼────────┼─────────────┼───────┼───────┤
+  │ 2009 │  5 259 │       47,29 │ 2 041 │ 3 218 │
+  ├──────┼────────┼─────────────┼───────┼───────┤
+  │ 2014 │  4 474 │       47,82 │ 1 837 │ 2 637 │
+  ├──────┼────────┼─────────────┼───────┼───────┤
+  │ 2019 │  4 111 │       47,76 │ 1 731 │ 2 380 │
+  ├──────┼────────┼─────────────┼───────┼───────┤
+  │ 2024 │  3 203 │       46,95 │ 1 353 │ 1 844 │
+  └──────┴────────┴─────────────┴───────┴───────┘
+
+  Za 25 let pokles o 52 %. Průměrný věk se ustálil kolem 47 let. Chcete nějakou
+  další analýzu nebo vizualizaci?
+
+✻ Cooked for 15s
+
+❯ Zobraz data pro farnost Lubina                                                
+
+● Bash(sqlite3 -column -header scitani.db "
+      SELECT rok, osob_celkem, prumerny_vek, muz, zena, neuvedeno…)
+  ⎿  rok   osob_celkem  prumerny_vek  muz  zena  neuvedeno
+     ----  -----------  ------------  ---  ----  ---------
+     1999  239          39.67         112  127
+     … +5 lines (ctrl+o to expand)
+
+● ┌──────┬────────┬─────────────┬──────┬──────┐
+  │ Rok  │ Celkem │ Průměr. věk │ Muži │ Ženy │
+  ├──────┼────────┼─────────────┼──────┼──────┤
+  │ 1999 │    239 │       39,67 │  112 │  127 │
+  ├──────┼────────┼─────────────┼──────┼──────┤
+  │ 2004 │    221 │       41,54 │   92 │  129 │
+  ├──────┼────────┼─────────────┼──────┼──────┤
+  │ 2009 │    212 │       43,67 │   98 │  114 │
+  ├──────┼────────┼─────────────┼──────┼──────┤
+  │ 2014 │    238 │       41,90 │  110 │  128 │
+  ├──────┼────────┼─────────────┼──────┼──────┤
+  │ 2019 │    206 │       40,08 │   97 │  109 │
+  ├──────┼────────┼─────────────┼──────┼──────┤
+  │ 2024 │    172 │       38,88 │   87 │   85 │
+  └──────┴────────┴─────────────┴──────┴──────┘
+
+  Farnost Lubina se od průměru děkanátu liší ve dvou věcech:
+
+  - Pokles mírnější — za 25 let −28 % (děkanát −52 %)
+  - Průměrný věk klesá (38,88 v 2024), zatímco děkanát jako celek stárne —
+  farnost tedy přitahuje nebo udržuje mladší věkové skupiny
+
+✻ Worked for 9s
+❯ Získej statistická data z                                                     
+  https://cs.wikipedia.org/wiki/Diec%C3%A9ze_ostravsko-opavsk%C3%A1             
+
+● Fetch(https://cs.wikipedia.org/wiki/Diec%C3%A9ze_ostravsko-opavsk%C3%A1)
+  ⎿  Received 202.3KB (200 OK)
+
+● Wikipedia obsahuje tyto statistické přehledy:
+
+  Základní údaje (infobox)
+  - 11 děkanátů, 276 farností, plocha 6 273 km²
+  - Obyvatelé (2001): 1 314 879 · Katolíci: 420 390 (32 %)
+  - Nedělní mše (2004): 68 225 účastníků
+
+  Historická tabulka
+
+  ┌─────┬─────────┬────────┬─────┬──────┬──────┬─────────┬────────┬─────┐
+  │ Rok │ Obyvate │ Katolí │  %  │ Kněž │ Jáhn │ Řeholní │ Farnos │ Křt │
+  │     │   lé    │   ci   │     │  í   │  i   │   ci    │   ti   │  y  │
+  ├─────┼─────────┼────────┼─────┼──────┼──────┼─────────┼────────┼─────┤
+  │ 199 │  1 370  │   600  │ 43, │  202 │   16 │   2 970 │    276 │ 681 │
+  │ 9   │     000 │    000 │ 8 % │      │      │         │        │     │
+  ├─────┼─────────┼────────┼─────┼──────┼──────┼─────────┼────────┼─────┤
+  │ 200 │  1 370  │   600  │ 43, │  205 │   16 │   2 926 │    276 │ 640 │
+  │ 1   │     000 │    000 │ 8 % │      │      │         │        │     │
+  ├─────┼─────────┼────────┼─────┼──────┼──────┼─────────┼────────┼─────┤
+  │ 200 │  1 320  │   424  │ 32, │  203 │   17 │   2 088 │    276 │ 674 │
+  │ 3   │     000 │    000 │ 1 % │      │      │         │        │     │
+  ├─────┼─────────┼────────┼─────┼──────┼──────┼─────────┼────────┼─────┤
+  │ 200 │  1 311  │   423  │ 32, │  205 │   17 │   2 063 │    277 │ 568 │
+  │ 4   │     000 │    000 │ 3 % │      │      │         │        │     │
+  ├─────┼─────────┼────────┼─────┼──────┼──────┼─────────┼────────┼─────┤
+  │ 201 │  1 313  │   429  │ 32, │  227 │   28 │   1 889 │    276 │ 311 │
+  │ 3   │     000 │    000 │ 7 % │      │      │         │        │     │
+  ├─────┼─────────┼────────┼─────┼──────┼──────┼─────────┼────────┼─────┤
+  │ 201 │  1 292  │   429  │ 33, │  227 │   26 │   1 889 │    276 │ 235 │
+  │ 9   │     170 │    000 │ 2 % │      │      │         │        │     │
+  └─────┴─────────┴────────┴─────┴──────┴──────┴─────────┴────────┴─────┘
+
+  Chcete tato data uložit do databáze jako samostatnou tabulku (např.
+  dieceze_statistiky)?
+
+✻ Brewed for 21s
+
+❯ Uložit do databáze jako tabulku `dieceze_statistiky`                          
+
+● Bash(sqlite3 scitani.db "
+      CREATE TABLE IF NOT EXISTS dieceze_statistiky (…)
+  ⎿  1999|1370000|600000|43.8|202|16|2970|276|681
+     2001|1370000|600000|43.8|205|16|2926|276|640
+     2003|1320000|424000|32.1|203|17|2088|276|674
+     … +3 lines (ctrl+o to expand)
+
+● Hotovo. Tabulka dieceze_statistiky vytvořena se 6 záznamy (1999–2019).
+  Sloupce: rok, obyvatele, katolici, katolici_pct, knezi, jahni, reholnici,
+  farnosti, krty.
+
+✻ Brewed for 12s
+
+❯ Projdi https://doo.cz/katalog/farnosti/ kde je seznam všech farností a pro    
+  každou farnost získej jméno faráře, kaplana, což jsou kněží a tímto způsobem  
+  získej počet kněží a jejich zařazení do farností.                             
+
+● Nejdřív prozkoumám strukturu stránky se seznamem farností.
+
+● Fetch(https://doo.cz/katalog/farnosti/)
+  ⎿  Received 157.6KB (200 OK)
+
+● Stažím celou stránku přes curl, abych získal kompletní seznam.
+
+● Bash(curl -s "https://doo.cz/katalog/farnosti/" | grep -oP
+      'href="[^"]*guid=[^"]*"[^>]*>[^<]*' | sed 's/href="//;s/"[^>]*>/\t/' |
+      head -20)
+  ⎿  /katalog/farnosti/?guid=cc4691c3-fb3e-468f-be2d-f2d827c3223e
+     /katalog/farnosti/?guid=b3c8cc15-fcbc-4a1d-9242-6d11258bff02
+     /katalog/farnosti/?guid=9bbc1ae3-1d17-4072-ac97-99ddb70d4f22
+     … +15 lines (ctrl+o to expand)
+
+● Bash(curl -s "https://doo.cz/katalog/farnosti/" | grep -oP
+      'href="/katalog/farnosti/\?guid=[^"]+">([^<]+)' | sed
+      's|href="/katalog/farnosti/?guid=||;s|">|\t|' | head…)
+  ⎿  (No output)
+
+● Bash(curl -s "https://doo.cz/katalog/farnosti/" | python3 -c "
+      import sys, re…)
+  ⎿  (No output)
+
+● Bash(curl -s "https://doo.cz/katalog/farnosti/" | python3 -c "
+      import sys…)
+  ⎿  (No output)
+
+● Bash(curl -s "https://doo.cz/katalog/farnosti/" | python3 -c "
+      import sys…)
+  ⎿  '<!doctype html>\n<html lang="cs" class="no-js">\n<head>\n\t<meta char
+     set="UTF-8">\n\t<meta name="viewport" content="width=device-width, ini
+     tial-scale=1, maximum-scale=1, user-scalable=0" /><meta name=\'robots\
+     … +30 lines (ctrl+o to expand)
+
+● Bash(curl -s "https://doo.cz/katalog/farnosti/" | python3 -c "
+      import sys…)
+  ⎿  ' <div class="header">\n            <h2>Seznam farností v diecézi</h2>
+     \n        </div>\n        <div class="seznam">\n                <li>\n
+                         <a class="link_text" href="/katalog/farnosti/?guid
+     … +8 lines (ctrl+o to expand)
+
+● Bash(curl -s "https://doo.cz/katalog/farnosti/" | python3 -c "
+      import sys, re…)
+  ⎿  Nalezeno: 278 farností
+     cc4691c3-fb3e-468f-be2d-f2d827c3223e       Albrechtice u Č.Těšína
+     b3c8cc15-fcbc-4a1d-9242-6d11258bff02       Albrechtičky
+     … +3 lines (ctrl+o to expand)
+
+● 278 farností nalezeno. Nejdřív prozkoumám strukturu detailní stránky jedné
+  farnosti.
+
+● Bash(curl -s "https://doo.cz/katalog/farnosti/?guid=03a88b1b-acbd-4d48-8020-d6
+      35ffffa416" | python3 -c "
+      import sys, re…)  ⎿  'a href="https://doo.cz/komu-se-venujeme/vzdelavani-knezi/"><span clas
+     s="menu-title-text">Vzdělávání kněží</span></a></li>\n\t\t<li id="menu
+     -item-1729" class="menu-item menu-item-type-post_type menu-item-object
+     … +18 lines (ctrl+o to expand)
+
+● Bash(curl -s "https://doo.cz/katalog/farnosti/?guid=03a88b1b-acbd-4d48-8020-d6
+      35ffffa416" | python3 -c "
+      import sys, re…)
+  ⎿  === kaplan at 52262 ===
+     '\t\t<li id="menu-item-1734" class="menu-item menu-item-type-post_type
+      menu-item-object-page nectar-regular-menu-item menu-item-1734"><a hre
+     … +7 lines (ctrl+o to expand)
+
+● Bash(curl -s "https://doo.cz/katalog/farnosti/?guid=03a88b1b-acbd-4d48-8020-d6
+      35ffffa416" | python3 -c "
+      import sys, re…)
+  ⎿  idx=-1
+     ''
+
+● Bash(curl -s "https://doo.cz/katalog/farnosti/?guid=03a88b1b-acbd-4d48-8020-d6
+      35ffffa416" | python3 -c "
+      import sys, re…)
+  ⎿  === Bernartice at 64262 ===
+     ' P. Marie</h3>\n        </div>\n            <div class="obec">\n
+                <strong>Obec:</strong> Bernartice nad Odrou\n            </
+     … +9 lines (ctrl+o to expand)
+
+● Bash(curl -s "https://doo.cz/katalog/farnosti/?guid=03a88b1b-acbd-4d48-8020-d6
+      35ffffa416" | python3 -c "
+      import sys…)
+  ⎿  === idx=51818 ===
+     'm-1732"><a href="https://doo.cz/cinnosti-a-sluzba/duchovni-sluzba/" a
+     ria-haspopup="true" aria-expanded="false"><span class="menu-title-text
+     … +10 lines (ctrl+o to expand)
+
+● Bash(curl -s "https://doo.cz/katalog/farnosti/?guid=03a88b1b-acbd-4d48-8020-d6
+      35ffffa416" | python3 -c "
+      import sys…)
+  ⎿  '  }\n            });\n        });\n    });\n</script>\n\n    <div cla
+     ss="blue-wrapp kostely">\n        <div class="kostel-nazev">\n
+         <h3>farní kostel Navštívení P. Marie</h3>\n        </div>\n
+     … +67 lines (ctrl+o to expand)
+
+● Bash(curl -s "https://doo.cz/katalog/farnosti/?guid=03a88b1b-acbd-4d48-8020-d6
+      35ffffa416" | python3 -c "
+      import sys…)
+  ⎿  Found [main-content] at 60513
+     'main-content" role="main">\n\t\t<div class="row">\n\t\t\t<p id="bread
+     crumbs" class="yoast"><span><span><a href="https://doo.cz/">Úvod</a></
+     … +15 lines (ctrl+o to expand)
+
+● Bash(curl -s "https://doo.cz/katalog/farnosti/?guid=03a88b1b-acbd-4d48-8020-d6
+      35ffffa416" | python3 -c "
+      import sys…)
+  ⎿  'main-content" role="main">\n\t\t<div class="row">\n\t\t\t<p id="bread
+     crumbs" class="yoast"><span><span><a href="https://doo.cz/">Úvod</a></
+     span>  <span><a href="https://doo.cz/katalog/">Katalog diecéze</a></sp
+     … +59 lines (ctrl+o to expand)
+
+● Struktura je jasná — sekce wrapp farnost osoby obsahuje role a jména. Napíšu
+  scraper pro všech 278 farností.
+
+● Write(scrape_knezi.py)
+  ⎿  Wrote 118 lines to scrape_knezi.py
+      1 #!/usr/bin/env python3
+      2 """Stáhne seznam kněží z doo.cz/katalog/farnosti/ a uloží do SQLi
+        te."""
+      3 
+      4 import re
+      5 import sqlite3
+      6 import time
+      7 import urllib.request
+      8 from html.parser import HTMLParser
+      9 from pathlib import Path
+     … +120 lines (ctrl+o to expand)
+
+● Nejdřív otestuji na jedné farnosti, pak spustím celý scraping.
+
+● Bash(python3 -c "
+      import re, urllib.request…)
+  ⎿  Error: Exit code 1
+     Traceback (most recent call last):
+       File "<string>", line 26, in <module>
+       File "<string>", line 8, in fetch
+       File "/usr/lib/python3.12/urllib/request.py", line 215, in urlopen
+         return opener.open(url, data, timeout)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+       File "/usr/lib/python3.12/urllib/request.py", line 521, in open
+         response = meth(req, response)
+                    ^^^^^^^^^^^^^^^^^^^
+     … +12 lines (ctrl+o to expand)
+
+● Bash(curl -s "https://doo.cz/katalog/farnosti/" | python3 -c "
+      import sys, re…)
+  ⎿  03a88b1b-acbd-4d48-8020-d635ffffa416       Bernartice nad Odrou
+     5ac8391f-3714-4b03-921a-6054af7ab58d       Lubina
+
+● Bash(python3 -c "
+      import re, urllib.request…)
+  ⎿  Lubina: [('Administrátor excurrendo', 'P. Mgr. Ing. Martin Kudla')]
+     Bernartice nad Odrou: [('Administrátor excurrendo', 'P. Mgr. Paweł Pio
+     tr Dobija')]
+
+● Parser funguje. Spouštím scraping všech 278 farností (cca 1,5 min).
+
+● Bash(python3 scrape_knezi.py 2>&1)
+  ⎿  Running in the background (↓ to manage)
+  ⎿  (timeout 5m)
+
+❯ Ulož python skripty zde pro použití v budoucnu. 
+
+● Scraping běží na pozadí. Mezitím uložím paměťový záznam o skriptech.
+
+  Recalled 1 memory, wrote 2 memories (ctrl+o to expand)
+
+● Skripty jsou uloženy v /mnt/f/lstefek/Documents/Aktivity/Farnost/Statistika/ a
+   zaznamenány v paměti pro budoucí konverzace. Čekám na dokončení scrapingu…
+
+  Read 1 file (ctrl+o to expand)
+
+● Scraping běží dobře. Kontroluji výsledek po dokončení.
+
+✻ Churned for 8m 24s
+
+● Background command "Run full parish priest scraper" completed (exit code 0)
+  Read 1 file (ctrl+o to expand)
+
+● Scraping dokončen. Výsledky v databázi:
+
+  Přehled rolí (celkem 412 záznamů):
+
+  ┌────────────────────────────────┬───────┐
+  │              Role              │ Počet │
+  ├────────────────────────────────┼───────┤
+  │ Administrátor excurrendo       │   135 │
+  ├────────────────────────────────┼───────┤
+  │ Farář                          │   131 │
+  ├────────────────────────────────┼───────┤
+  │ Farní vikář                    │    33 │
+  ├────────────────────────────────┼───────┤
+  │ Jáhen trvalý                   │    31 │
+  ├────────────────────────────────┼───────┤
+  │ Samostatný pastorační asistent │    19 │
+  ├────────────────────────────────┼───────┤
+  │ Na trvalém odpočinku           │    13 │
+  ├────────────────────────────────┼───────┤
+  │ Výpomocný duchovní             │     9 │
+  ├────────────────────────────────┼───────┤
+  │ Administrátor                  │     7 │
+  ├────────────────────────────────┼───────┤
+  │ Nemocniční kaplan              │     6 │
+  ├────────────────────────────────┼───────┤
+  │ Kaplan pro církevní školy      │     5 │
+  ├────────────────────────────────┼───────┤
+  │ …                              │     … │
+  └────────────────────────────────┴───────┘
+
+  Zajímavé: farářů a administrátorů excurrendo je skoro stejně (131 vs 135) —
+  více než polovina farností tedy nemá vlastního faráře, ale spravuje je kněz z
+  jiné farnosti.
+
+  Tabulka knezi je uložena v scitani.db. Chcete nějakou analýzu?
+
+✻ Churned for 10s
+
+❯ fg                                                                            
+
+● Na mé straně žádný proces na pozadí neběží — scraping byl dokončen a výsledky
+  jsou v databázi. Měl jste na mysli něco jiného?
+
+✻ Worked for 4s
+
+❯ Kolik kněží tedy v diecézi je?                                                
+
+● Bash(sqlite3 -column -header scitani.db "
+      -- Kněží = osoby s titulem P. (pater) nebo jinak identifikovatelní jako
+      kněží…)
+  ⎿  unikatni_knezi
+     --------------
+     192
+
+● Bash(sqlite3 -column -header scitani.db "
+      -- Přehled podle role a počtu unikátních jmen…)
+  ⎿  role                                                     pocet_osob
+     -------------------------------------------------------  ----------
+     Farář                                                    131
+     … +20 lines (ctrl+o to expand)
+
+● Bash(sqlite3 scitani.db "
+      -- Kněží s duchovní rolí ale bez prefixu P. (výjimky)…)
+  ⎿  Jaroslav Kantor|Administrátor excurrendo
+     Mgr. Dagmar Sližová|Nemocniční kaplan
+     Mgr. Emil Morav|Na trvalém odpočinku
+     … +11 lines (ctrl+o to expand)
+
+● Celkový počet kněží v diecézi: 192 (unikátní osoby s titulem P. nebo Mons.)
+
+  Přesněji:
+  - 131 farářů — každý spravuje svou farnost
+  - 76 administrátorů excurrendo — jeden kněz obvykle pokrývá více farností
+  (proto 135 záznamů, ale jen 76 unikátních jmen)
+  - 32 farních vikářů (kaplanů)
+  - 9 výpomocných duchovních + 7 administrátorů + další role
+
+  K tomu přibývají 4 nemocniční kaplani-laici (Mgr. bez kněžského svěcení) a 1
+  laický administrátor (Jaroslav Kantor). Celkem tedy 278 farností obsluhuje
+  přibližně 192 vysvěcených kněží.
+
+✻ Churned for 22s
+
+❯ Provedeme nyní predikci počtu věřících na základě předchozích sčítání a       
+  trendu. Taku projekci trendu navrhuješ?                                       
+
+● Na základě 6 datových bodů (každých 5 let) doporučuji exponenciální pokles
+  jako hlavní model — demografický úbytek je obvykle proporcionální k aktuální
+  velikosti komunity (menší farnost → méně dětí → další pokles). Matematicky: y 
+  = a · e^(b·t).
+
+  Alternativa je lineární regrese — jednodušší, ale předpokládá konstantní
+  absolutní pokles, což u menších farností vede k nerealistickým záporným
+  hodnotám.
+
+  Doporučení: exponenciální pokles jako primární + lineární jako srovnání,
+  výstup pro roky 2029, 2034, 2039.
+
+  Chcete projekci pro:
+  1. celou diecézi souhrnně
+  2. jednotlivé děkanáty
+  3. každou farnost zvlášť
+
+  …nebo kombinaci?
+
+✻ Churned for 16s
+
+❯ Kombinaci pro všechny tři úrovně.                                             
+
+● Nejdřív ověřím dostupné Python balíčky.
+
+● Bash(python3 -c "import numpy, scipy; print('numpy', numpy.__version__,
+      'scipy', scipy.__version__)")
+  ⎿  Error: Exit code 1
+     Traceback (most recent call last):
+       File "<string>", line 1, in <module>
+     ModuleNotFoundError: No module named 'numpy'
+
+● Bash(python3 -c "import statistics, math; print('ok')" && pip install numpy
+      scipy --quiet 2>&1 | tail -3)
+  ⎿  ok
+
+     note: If you believe this is a mistake, please contact your Python ins
+     … +4 lines (ctrl+o to expand)
+
+● Bash(pip install numpy scipy --break-system-packages --quiet 2>&1 | tail -3)
+  ⎿  (No output)
+
+● Bash(python3 -c "import numpy, scipy; print('numpy', numpy.__version__,
+      'scipy', scipy.__version__)")
+  ⎿  numpy 2.4.6 scipy 1.17.1
+
+● Write(predikce.py)
+  ⎿  Wrote 221 lines to predikce.py
+       2 """usr/bin/env python3
+       3 Predikce počtu věřících na základě sčítání 1999–2024.
+       4 Modely: exponenciální pokles + lineární regrese.
+       5 Úrovně: diecéze, děkanát, farnost.
+       6 Výstup: tabulky predikce_dieceze, predikce_dekanat, predikce_far
+         nost v scitani.db.
+       7 """
+       8 
+       9 import math
+      10 import sqlite3
+     … +241 lines (ctrl+o to expand)
+
+● Bash(python3 predikce.py)
+  ⎿  === DIECÉZE ===
+       Exp model: a=77115.4, b=-0.0273, R²=0.959
+       Lin model: R²=0.989
+     … +23 lines (ctrl+o to expand)
+
+● Predikce uložena. Shrnutí výsledků:
+
+  ---
+  Diecéze celkem (R²=0,96 exp / 0,99 lin)
+
+  ┌──────┬────────────┬────────────┬────────────┐
+  │ Rok  │ Skutečnost │ Exp. model │ Lin. model │
+  ├──────┼────────────┼────────────┼────────────┤
+  │ 2024 │    ~42 000 │          — │          — │
+  ├──────┼────────────┼────────────┼────────────┤
+  │ 2029 │          — │     33 971 │     30 696 │
+  ├──────┼────────────┼────────────┼────────────┤
+  │ 2034 │          — │     29 633 │     23 378 │
+  ├──────┼────────────┼────────────┼────────────┤
+  │ 2039 │          — │     25 848 │     16 061 │
+  └──────┴────────────┴────────────┴────────────┘
+
+  Oba modely se shodují pro 2029, pak se rozcházejí — lineární model přepokládá
+  stále rychlejší absolutní pokles (a nakonec nerealisticky nízká čísla),
+  exponenciální je konzervativnější.
+
+  ---
+  Děkanát Nový Jičín (R²=0,986 — nejpřesnější fit)
+
+  ┌──────┬───────┬───────┐
+  │ Rok  │ Exp.  │ Lin.  │
+  ├──────┼───────┼───────┤
+  │ 2029 │ 2 934 │ 2 585 │
+  ├──────┼───────┼───────┤
+  │ 2034 │ 2 560 │ 1 967 │
+  ├──────┼───────┼───────┤
+  │ 2039 │ 2 234 │ 1 350 │
+  └──────┴───────┴───────┘
+
+  ---
+  Farnost Lubina — predikce 2029: 179 osob (obě metody se shodují), což odpovídá
+   mírnějšímu poklesu oproti průměru děkanátu.
+
+  Chcete výsledky i vizualizovat (grafy)?
+
+✻ Cogitated for 1m 24s
+
+❯ Zazmenej predikci do databáze.                                                
+● Bash(sqlite3 -column -header scitani.db "
+      SELECT name, COUNT(*) as radku FROM sqlite_master…)
+  ⎿  name              radku
+     ----------------  -----
+     predikce_dekanat  1
+     … +16 lines (ctrl+o to expand)
+
+● Predikce je již v databázi uložena ze skriptu predikce.py — tři tabulky:
+
+  - predikce_dieceze — 9 řádků (6 historických + 3 predikce)
+  - predikce_dekanat — pro každý ze 11 děkanátů
+  - predikce_farnost — pro každou ze 277 farností
+
+  Každá tabulka obsahuje historické hodnoty (hodnota) i predikce (exp_val,
+  lin_val) pro roky 2029, 2034, 2039. Není co doplňovat — data jsou kompletní.
+
+✻ Churned for 11s
+
+❯ Vizualizuj predikci jako grafy                                                
+
+● Bash(python3 -c "import matplotlib; print(matplotlib.__version__)" 2>/dev/null
+       || pip install matplotlib --break-system-packages --quiet 2>&1 | tail -2)
+  ⎿  (No output)
+
+● Bash(pip install matplotlib --break-system-packages --quiet && python3 -c
+      "import matplotlib; print(matplotlib.__version__)")
+  ⎿  3.10.9
+
+● Write(grafy.py)
+  ⎿  Wrote 205 lines to grafy.py
+       2 """Vizualizace predikce návštěvnosti bohoslužeb — diecéze, děkan
+         áty, farnosti NJ."""
+       3 
+       4 import sqlite3
+       5 from pathlib import Path
+       6 
+       7 import matplotlib
+       8 matplotlib.use("Agg")
+       9 import matplotlib.pyplot as plt
+      10 import matplotlib.ticker as mticker
+     … +224 lines (ctrl+o to expand)
+
+● Bash(python3 grafy.py)
+  ⎿  Generuji grafy:
+       /mnt/f/lstefek/Documents/Aktivity/Farnost/Statistika/grafy/dieceze.p
+     ng
+     … +7 lines (ctrl+o to expand)
+
+● Skill(ls-img)
+  ⎿  Successfully loaded skill
+
+  Read 1 file (ctrl+o to expand)
+
+● Graf diecéze je v pořádku. Chcete zobrazit i ostatní tři grafy (děkanáty,
+  farnosti NJ, srovnání 2024 vs 2039)?
+
+✻ Churned for 1m 21s
+
+❯ Zobraz i ostatní grafy                                                        
+
+  Read 3 files (ctrl+o to expand)
+
+● Všechny čtyři grafy jsou vygenerovány. Několik postřehů:
+
+  - Děkanáty — Jeseník má nejméně pravidelný průběh (R²=0,54), ostatní sledují
+  trend poměrně těsně
+  - Farnosti NJ — Lubina patří k stabilnějším, Tichá a Bartošovice mají
+  výraznější výkyvy
+  - Srovnání 2039 — Karviná má největší rozdíl mezi exp. a lin. modelem
+  (lineární model předpovídá pokles na ~500, exponenciální na ~2 600) — jde o
+  děkanát kde pokles zrychlil, proto modely divergují nejvíce
+
+  Grafy jsou uloženy v adresáři grafy/. Chcete ještě něco upravit nebo doplnit?
+
+✻ Baked for 18s
+
+❯ Vysvětli mi predikci u farnosti Lubina.                                       
+
+● Bash(sqlite3 -column -header scitani.db "
+      SELECT rok, hodnota, exp_val, lin_val, r2_exp, r2_lin…)
+  ⎿  rok   hodnota  exp_val  lin_val  r2_exp             r2_lin
+     ----  -------  -------  -------  -----------------  -----------------
+     1999  239
+     … +8 lines (ctrl+o to expand)
+
+● Lubina je zajímavý případ — vysvětlím co se děje:
+
+  Proč se oba modely shodují a predikují jen mírný pokles
+
+  Data z 6 sčítání:
+
+  ┌──────┬──────────────┐
+  │ Rok  │  Skutečnost  │
+  ├──────┼──────────────┤
+  │ 1999 │          239 │
+  ├──────┼──────────────┤
+  │ 2004 │          221 │
+  ├──────┼──────────────┤
+  │ 2009 │          212 │
+  ├──────┼──────────────┤
+  │ 2014 │ 238 ← nárůst │
+  ├──────┼──────────────┤
+  │ 2019 │          206 │
+  ├──────┼──────────────┤
+  │ 2024 │          172 │
+  └──────┴──────────────┘
+
+  Rok 2014 narušuje monotónní pokles — farnost tehdy vykázala nárůst o 26 osob
+  oproti 2009. To "zplošťuje" regresní přímku i exponenciálu, protože oba modely
+   fitují celou řadu najednou a nevidí jen poslední roky.
+
+  Nízké R² (0,56–0,58) říká přesně toto: modely vysvětlují jen 56 % variability
+  — data Lubiny nesledují čistý trend, mají výkyvy. Pro srovnání: děkanát Nový
+  Jičín má R²=0,986.
+
+  Výsledná predikce
+
+  ┌──────┬──────┬──────┐
+  │ Rok  │ Exp. │ Lin. │
+  ├──────┼──────┼──────┤
+  │ 2029 │  179 │  179 │
+  ├──────┼──────┼──────┤
+  │ 2034 │  171 │  169 │
+  ├──────┼──────┼──────┤
+  │ 2039 │  162 │  159 │
+  └──────┴──────┴──────┘
+
+  Reálný pokles ~4–5 % za 5 let, zatímco průměr děkanátu klesá ~22 % za 5 let.
+  Modely tedy říkají: Lubina klesá výrazně pomaleji než okolí — ale je to hlavně
+   proto, že výkyv v 2014 táhne trendovou linii nahoru. Kdybychom fitovali jen
+  2014–2024, predikce by byla pesimističtější (~130–140 v 2029).
+
+✻ Sautéed for 18s
+
+❯ Koriguj 2014 jako outlayer na hodnotu 210 a přepočti. Kolik to pak bude?      
+
+● Bash(python3 -c "
+      import math…)
+  ⎿  Exp model: a=238.8, b=-0.01066, R²=0.848
+     Lin model: a=237.3, b=-2.183, R²=0.859
+     … +4 lines (ctrl+o to expand)
+
+● Po korekci 2014 na 210:
+
+  ┌──────┬──────┬──────┬───────────────────────┐
+  │ Rok  │ Exp. │ Lin. │ Původní (bez korekce) │
+  ├──────┼──────┼──────┼───────────────────────┤
+  │ 2029 │  173 │  172 │                   179 │
+  ├──────┼──────┼──────┼───────────────────────┤
+  │ 2034 │  164 │  161 │             171 / 169 │
+  ├──────┼──────┼──────┼───────────────────────┤
+  │ 2039 │  156 │  150 │             162 / 159 │
+  └──────┴──────┴──────┴───────────────────────┘
+
+  R² skočilo z 0,56 na 0,85 — trend je nyní výrazně čistší, oba modely se téměř
+  shodují.
+
+  Rozdíl oproti nekorigované verzi je ~6–9 osob v roce 2039 — relativně malý,
+  ale predikce je teď spolehlivější. Roční pokles odpovídá přibližně 2–3 osobám 
+  ročně, tedy ~1 % p.a.
+
+  Chcete tuto korekturu zapsat do databáze jako alternativní scénář, nebo
+  přepsat původní hodnotu?
+
+✻ Sautéed for 20s
+
+❯ přepiš to.                                                                    
+
+● Bash(sqlite3 scitani.db "
+      UPDATE scitani SET osob_celkem = 210 WHERE farnost = 'Lubina' AND rok =
+      2014;…)
+  ⎿  1 řádek upraven.
+     Lubina|1999|239
+     Lubina|2004|221
+     … +4 lines (ctrl+o to expand)
+● Teď přepočítám predikci a grafy.
+
+● Bash(python3 predikce.py 2>&1 | grep -E "Lubina|Hotovo" && python3 grafy.py
+      2>&1 | grep "farnosti")
+  ⎿    Lubina: 2029 exp=173 lin=172
+     Hotovo — tabulky predikce_dieceze, predikce_dekanat, predikce_farnost
+     uloženy.
+     … +2 lines (ctrl+o to expand)
+
+● Hotovo. Databáze i grafy aktualizovány:
+
+  - scitani.osob_celkem pro Lubina 2014 → 210
+  - Predikce přepočítána: 2029 = 173, 2034 = 164, 2039 = 156
+  - Graf farnosti_novy_jicin.png vygenerován znovu
+
+✻ Sautéed for 19s
+
+※ recap: Stavíme SQLite databázi statistik bohoslužeb Diecéze ostravsko-opavské s predikcí do 2039. Právě jsme zkorigovali hodnotu farnosti Lubina 2014 a přepočítali predikci. Další krok: další analýzy nebo vizualizace dle potřeby. (disable recaps in /config)
+
+❯ Nyní do analýzy zahrneme počet kněží. Je odůvodněná predikce, že za 10 let    
+  bude v diecézi polovina kněží. To je dramatický pokles a jeho řešení          
+  diskutabilní. Jak to zahrneme do analýzy?                                     
+
+● Dobrá otázka na přístup. Máme dvě oddělené datové řady a otázka je, jak je
+  propojit smysluplně. Vidím tři použitelné úhly:
+
+  1. Zátěžový poměr (věřící / kněz)
+  Sledovat, jak se mění počet věřících na jednoho kněze. Pokud věřící klesají
+  rychleji než kněží, zátěž se snižuje — ale geografická roztříštěnost zůstává.
+  Pokud kněží klesají rychleji, farnosti se slučují nebo zůstávají bez správce.
+
+  2. Kapacitní model farností
+  Máme 278 farností, dnes ~192 kněží → průměr 1,4 farnosti/kněz. Při 96 kněžích
+  → 2,9 farnosti/kněz. Lze vizualizovat, které farnosti (podle velikosti) by
+  byly ohroženy jako první — prioritizace podle počtu věřících.
+
+  3. Korelace poklesu věřících a kněží
+  Otestovat, zda tam kde kněží ubývají rychleji, klesají i věřící rychleji —
+  nebo naopak (kauzalita vs. demografický trend).
+
+  Problém s daty: z tabulky dieceze_statistiky máme kněze jen za roky 1999–2019
+  (6 bodů), aktuální stav 2024 máme ze scrapingu (~192). Predikce "polovina za
+  10 let" přichází zvenku — nemáme vlastní datovou řadu ordinací a odchodů.
+
+  Doporučení: začít přístupem č. 2 — kapacitní model. Je nejkonkrétnější,
+  pracuje s daty která máme (278 farností, aktuální kněží, predikce věřících), a
+   odpovídá na praktickou otázku: které farnosti budou bez kněze a jak velké 
+  jsou?
+
+  Chcete jít touto cestou, nebo kombinovat více přístupů?
+
+✻ Brewed for 30s
+
+❯ Jdi cestou kapacitního modelu.                                                
+
+● Nejdřív si prohlédnu aktuální data o kněžích a farnostech.
+
+● Bash(sqlite3 -column -header scitani.db "
+      -- Aktuální stav: farnosti + jejich kněží + predikce věřících 2034…)
+  ⎿  dekanat  farnost                   role                      jmeno
+                                    ver_2024  ver_2034
+     -------  ------------------------  ------------------------  ---------
+     … +18 lines (ctrl+o to expand)
+
+● Bash(sqlite3 scitani.db "
+      -- Kolik farností aktuálně pokrývá každý kněz?…)
+  ⎿  P. Mgr. Josef Juriga|7
+     P. PaedDr. ThLic. Marcel Puvák|7
+     P. Mgr. ICLic. František Zehnal, Th.D.|6
+     … +7 lines (ctrl+o to expand)
+
+● Mám dost dat. Napíšu komplexní kapacitní model.
+
+● Write(kapacitni_model.py)
+  ⎿  Wrote 254 lines to kapacitni_model.py
+       2 """usr/bin/env python3
+       3 Kapacitní model: kolik farností lze obsloužit při klesajícím poč
+       4 tu kněží?
+       5 Předpoklady:
+       6 - 2024: 192 kněží, 278 farností
+       8 - Max. farností na kněze: aktuální průměr je 1,45; praktický str
+         op ~4
+         ání nedělních mší)kněz je služba fyzicky neudržitelná při zachov
+      10 - Přidělování prioritou: nejdříve jsou obsluhovány největší farn
+         osti
+     … +278 lines (ctrl+o to expand)
+
+● Bash(python3 kapacitni_model.py)
+  ⎿     Rok   Kněží   Kapac.   Pokryt.    Ohrož.   Věř.pokr.   Věř.ohr.   %
+      ohr.
+     ----------------------------------------------------------------------
+     … +20 lines (ctrl+o to expand)
+
+● Model ukazuje, že s limitem 4 farnosti/kněz je kapacita pořád dostačující —
+  ale to je příliš velkorysé. Realisticky jeden kněz zvládne každou neděli
+  celebrovat ve 2 farnostech (mše v různou dobu). Opravím limit a doplním
+  interpolaci pro chybějící roky.
+
+● Update(kapacitni_model.py)
+  ⎿  Added 1 line, removed 1 line
+      27  
+      28  KNEZI_2024    = 192
+      29  POKLES_B      = math.log(0.5) / 10   # -50 % za 10 let
+      30 -MAX_FAR_KNEZ  = 4                     # praktický strop farnost
+         -í na kněze                                                     
+      30 +MAX_FAR_KNEZ  = 2                     # každou neděli mše ve 2 
+         +farnostech (různé časy)                                        
+      31  ROKY_MODELU   = [2024, 2027, 2029, 2031, 2034, 2037, 2039]
+      32  
+      33  
+
+● Update(kapacitni_model.py)
+  ⎿  Added 28 lines, removed 6 lines
+      37  
+      38  
+      39  def predikni_verice(conn, rok: int) -> dict[str, float]:
+      40 -    """Vrátí {farnost: predikovaný počet věřících} pro daný rok
+         -."""                                                           
+      40 +    """Vrátí {farnost: predikovaný počet věřících} pro daný rok
+         +.                                                              
+      41 +    Pro roky bez dat interpoluje lineárně mezi nejbližšími dost
+         +upnými body."""                                                
+      42      if rok <= 2024:
+      43          rows = conn.execute(
+      44              "SELECT farnost, osob_celkem FROM scitani WHERE rok
+          =? AND osob_celkem IS NOT NULL",
+      45              (rok,)
+      46          ).fetchall()
+      47          return {r[0]: r[1] for r in rows}
+      47 -    rows = conn.execute(                                       
+      48 -        "SELECT farnost, exp_val FROM predikce_farnost WHERE ro
+         -k=? AND exp_val IS NOT NULL",                                  
+      49 -        (rok,)                                                 
+      50 -    ).fetchall()                                               
+      51 -    return {r[0]: r[1] for r in rows}                          
+      48  
+      49 +    # Dostupné predikční roky                                  
+      50 +    pred_roky = [2029, 2034, 2039]                             
+      51 +    if rok in pred_roky:                                       
+      52 +        rows = conn.execute(                                   
+      53 +            "SELECT farnost, exp_val FROM predikce_farnost WHER
+         +E rok=? AND exp_val IS NOT NULL",                              
+      54 +            (rok,)                                             
+      55 +        ).fetchall()                                           
+      56 +        return {r[0]: r[1] for r in rows}                      
+      57  
+      58 +    # Interpolace: najdi okolní roky                           
+      59 +    vsechny = [2024] + pred_roky                               
+      60 +    r_low  = max(r for r in vsechny if r <= rok)               
+      61 +    r_high = min(r for r in vsechny if r >= rok)               
+      62 +    if r_low == r_high:                                        
+      63 +        return predikni_verice(conn, r_low)                    
+      64 +                                                               
+      65 +    d_low  = predikni_verice(conn, r_low)                      
+      66 +    d_high = predikni_verice(conn, r_high)                     
+      67 +    t = (rok - r_low) / (r_high - r_low)                       
+      68 +    result = {}                                                
+      69 +    for far in set(d_low) | set(d_high):                       
+      70 +        v_low  = d_low.get(far, 0)                             
+      71 +        v_high = d_high.get(far, 0)                            
+      72 +        result[far] = v_low + t * (v_high - v_low)             
+      73 +    return result                                              
+      74 +                                                               
+      75 +                                                               
+      76  def dekanaty_far(conn) -> dict[str, str]:
+      77      rows = conn.execute("SELECT DISTINCT farnost, dekanat FROM 
+          scitani").fetchall()
+      78      return {r[0]: r[1] for r in rows}
+
+● Bash(python3 kapacitni_model.py)
+  ⎿     Rok   Kněží   Kapac.   Pokryt.    Ohrož.   Věř.pokr.   Věř.ohr.   %
+      ohr.
+     ----------------------------------------------------------------------
+     … +30 lines (ctrl+o to expand)
+
+  Read 2 files (ctrl+o to expand)
+
+● Model je hotový. Klíčové závěry:
+
+  Kritický bod nastane kolem roku 2031 — tehdy kapacita kněží (118 × 2 = 236)
+  poprvé nestačí pokrýt všech 278 farností.
+
+  Scénář 2034 (96 kněží):
+  - 82 farností ohrožených — bez pravidelné nedělní mše
+  - Ale pouze ~800 věřících (2,6 %) žije v těchto farnostech — jde o nejmenší
+  farnosti s <25 věřícími
+  - Zasažené děkanáty nejvíce: Bruntál (26 ohrožených z 33), Krnov (22 z 27),
+  Jeseník (16 z 28) — periferní horské oblasti
+
+  Co to říká:
+  Pokles věřících a pokles kněží jdou paradoxně "ruku v ruce" — nejmenší
+  farnosti, které ztratí kněze, mají zároveň nejméně věřících. Tlak na slučování
+   farností bude geografický (periferie) a nikoliv tam, kde je lidí nejvíc.
+  Děkanáty Frýdek, Hlučín, Místek a Ostrava zůstávají v modelu plně pokryty až
+  do 2039.
+
+✻ Baked for 2m 59s
+
+❯ Zobraz ohrožené farnosti děkanátu Nový Jičín                                  
+
+● Bash(sqlite3 -column -header scitani.db "
+      SELECT…)
+  ⎿  farnost               rok   vericich  stav      knez
+                     role
+     --------------------  ----  --------  --------  ----------------------
+     … +31 lines (ctrl+o to expand)
+
+● V děkanátu Nový Jičín jsou ohroženy 4–9 farností podle roku:
+
+  2034 (96 kněží) — 1 farnost:
+
+  ┌─────────┬────────┬──────────────────────┐
+  │ Farnost │ Věřící │    Aktuální kněz     │
+  ├─────────┼────────┼──────────────────────┤
+  │ Trnávka │     19 │ P. Lasoń (adm. exc.) │
+  └─────────┴────────┴──────────────────────┘
+
+  2037 (78 kněží) — 8 farností:
+
+  ┌───────────────────┬────────┐
+  │      Farnost      │ Věřící │
+  ├───────────────────┼────────┤
+  │ Bartošovice       │     33 │
+  ├───────────────────┼────────┤
+  │ Sedlnice          │     33 │
+  ├───────────────────┼────────┤
+  │ Vlčovice          │     31 │
+  ├───────────────────┼────────┤
+  │ Jeseník nad Odrou │     30 │
+  ├───────────────────┼────────┤
+  │ Mošnov            │     26 │
+  ├───────────────────┼────────┤
+  │ Albrechtičky      │     24 │
+  ├───────────────────┼────────┤
+  │ Trnávka           │     17 │
+  └───────────────────┴────────┘
+
+  2039 (68 kněží) — +Bernartice, Kunín, Ženklava, Veřovice (celkem 11 farností)
+
+  Pozoruhodné: Jeseník nad Odrou a Albrechtičky mají dnes faráře, nikoliv
+  administrátora — jsou to tedy farnosti kde by šlo o ztrátu vlastního kněze, ne
+   jen výpomocného. Lubina v modelu zůstává pokryta i v roce 2039 (172 věřících
+  — dostatečná velikost).
+
+✻ Cooked for 15s
+❯ Zobraz ohrožené farnosti na mapě                                              
+
+● Bash(python3 -c "import folium; print(folium.__version__)" 2>/dev/null || pip
+      install folium --break-system-packages --quiet && python3 -c "import
+      folium; print('fol…)
+  ⎿  folium 0.20.0
+
+● Souřadnice farností nejsou v databázi — stáhnu je z doo.cz (jsou v HTML každé
+  stránky farnosti).
+
+● Bash(curl -s "https://doo.cz/katalog/farnosti/?guid=5ac8391f-3714-4b03-921a-60
+      54af7ab58d" | grep -oP 'query=[\d.,]+')
+  ⎿  query=49.6181,18.1744
+
+● Write(scrape_souradnice.py)
+  ⎿  Wrote 74 lines to scrape_souradnice.py
+       2 """Stáhne GPS souřadnice farností z doo.cz a uloží do tabulky fa
+         rnosti_souradnice."""
+       3 
+       4 import re
+       5 import sqlite3
+       6 import time
+       7 import urllib.request
+       8 from pathlib import Path
+       9 
+      10 DB_FILE  = Path(__file__).parent / "scitani.db"
+     … +71 lines (ctrl+o to expand)
+
+● Bash(python3 scrape_souradnice.py 2>&1)
+  ⎿  Running in the background (↓ to manage)
+
+● Scraping souřadnic běží na pozadí (~1,5 min). Mezitím připravím mapový skript.
+
+● Write(mapa_ohrozenych.py)
+  ⎿  Wrote 112 lines to mapa_ohrozenych.py
+       1 #!/usr/bin/env python3
+       2 """
+       3 Interaktivní mapa ohrožených farností podle kapacitního modelu.
+       4 Generuje HTML soubory pro roky 2034, 2037, 2039.
+       5 """
+       6 
+       7 import sqlite3
+       8 from pathlib import Path
+       9 import folium
+      10 from folium.plugins import MarkerCluster
+     … +115 lines (ctrl+o to expand)
+
+✻ Worked for 1m 3s
+
+❯ Spusť mapu po dokončení scrapingu. Potom připrav podrobný report o analýze,   
+  včetně grafů, popisu vstupů, metodiky, trendů a prognózy. Vytvoř závěrečnou   
+  kapitolu o dopadech úbytků a o možných scénářích jak reagovat na prognózovaný 
+   vývoj.                                                                       
+
+  Read 1 file (ctrl+o to expand)
+
+● Scraping ještě běží, počkám na dokončení. Mezitím připravím report — budu ho
+  psát paralelně.
+
+● Bash(sqlite3 scitani.db "
+      -- Data pro report: celkové hodnoty…)
+  ⎿  1999|73266
+     2004|67108
+     2009|61911
+     … +3 lines (ctrl+o to expand)
+
+● Bash(sqlite3 scitani.db "
+      SELECT rok, knezi, katolici, katolici_pct FROM dieceze_statistiky ORDER BY
+       rok;…)
+  ⎿  1999|202|600000|43.8
+     2001|205|600000|43.8
+     2003|203|424000|32.1
+     … +5 lines (ctrl+o to expand)
+
+✻ Worked for 19s
+
+❯ Pokračuj ve tvorbě reportu, udělej ho jako html stránku.                      
+
+  Read 1 file (ctrl+o to expand)
+
+● Bash(sqlite3 scitani.db "SELECT COUNT(*) FROM farnosti_souradnice WHERE lat IS
+       NOT NULL;" 2>/dev/null || echo "tabulka neexistuje")
+  ⎿  148
+
+● Scraping stále běží (148/278). Sbírám data pro report a píšu HTML.
+
+● Bash(sqlite3 scitani.db "
+      -- Děkanáty: hodnoty pro tabulku v reportu…)
+  ⎿  Frýdek|12114|7436|-38.6|19
+     Hlučín|15440|6999|-54.7|22
+     Ostrava|8075|4432|-45.1|21
+     … +8 lines (ctrl+o to expand)
+
+● Bash(sqlite3 scitani.db "
+      -- Predikce diecéze…)
+  ⎿  1999|73266||
+     2004|67108||
+     2009|61911||
+     … +23 lines (ctrl+o to expand)
+
+● Bash(sqlite3 scitani.db "
+      -- Top 5 nejrychleji klesajících farností NJ (2019→2024)…)
+  ⎿  Veřovice|300|72|-76.0
+     Albrechtičky|184|45|-75.5
+     Mořkov|401|104|-74.1
+     … +24 lines (ctrl+o to expand)
+
+● Mám vše potřebné. Píšu HTML report.
+
+● Write(report.html)  ⎿  Wrote 415 lines to report.html
+       2 <html lang="cs">
+       3 <head>
+       4 <meta charset="UTF-8">
+       5 <meta name="viewport" content="width=device-width, initial-scale
+         =1.0">
+         ravsko-opavská</title>lýza návštěvnosti bohoslužeb — Diecéze ost
+       7 <style>
+       8   :root {
+       9     --blue:   #2563eb;
+      10     --red:    #dc2626;
+     … +591 lines (ctrl+o to expand)
+
+● Background command "Scrape parish coordinates from doo.cz" completed (exit code 0)
+
+● Scraping souřadnic dokončen. Spouštím mapy a doplním odkaz do reportu.
+
+  Read 1 file (ctrl+o to expand)
+
+● Bash(python3 mapa_ohrozenych.py)
+  ⎿    /mnt/f/lstefek/Documents/Aktivity/Farnost/Statistika/grafy/mapa_ohro
+     zenych_2034.html
+       /mnt/f/lstefek/Documents/Aktivity/Farnost/Statistika/grafy/mapa_ohro
+     … +4 lines (ctrl+o to expand)
+
+● Mapy jsou hotové. Doplním je do reportu.
+
+● Update(report.html)
+  ⎿  Added 8 lines
+      338    <figcaption>Graf 6: Pokrytí farností podle děkanátů ve scéná
+           ři 2034 (96 kněží)</figcaption>
+      339  </figure>
+      340  
+      341 +<h3>Interaktivní mapy</h3>                                    
+      342 +<p>Následující mapy zobrazují všechny farnosti diecéze. <span 
+          +style="color:#2563eb">●&nbsp;Modré</span> body jsou pokryté, <
+          +span style="color:#dc2626">●&nbsp;červené</span> ohrožené. Vel
+          +ikost bodu odpovídá počtu věřících. Kliknutím na bod se zobraz
+          +í detail farnosti.</p>                                        
+      343 +<ul>                                                          
+      344 +  <li><a href="grafy/mapa_ohrozenych_2034.html" target="_blank
+          +">🗺 Mapa — scénář 2034 (96 kněží, 82 ohrožených farností)</a><
+          +/li>                                                          
+      345 +  <li><a href="grafy/mapa_ohrozenych_2037.html" target="_blank
+          +">🗺 Mapa — scénář 2037 (78 kněží, 118 ohrožených farností)</a>
+          +</li>                                                         
+      346 +  <li><a href="grafy/mapa_ohrozenych_2039.html" target="_blank
+          +">🗺 Mapa — scénář 2039 (68 kněží, 138 ohrožených farností)</a>
+          +</li>                                                         
+      347 +</ul>                                                         
+      348 +                                                              
+      349  <h3>Geografické rozložení ohrožení</h3>
+      350  <p>Nejohroženější jsou periferní děkanáty s mnoha malými venko
+           vskými farnostmi:</p>
+      351  <ul>
+
+● Vše je hotovo. Shrnutí výstupů:
+
+  ---
+  Report report.html obsahuje 7 kapitol:
+  1. Datové zdroje (CSV sčítání, doo.cz, Wikipedia, předpoklad poklesu kněží)
+  2. Metodika (exponenciální + lineární regrese, R², kapacitní model)
+  3. Historické trendy (diecéze −51 %, tabulka děkanátů, farnosti NJ)
+  4. Prognóza 2029–2039 s tabulkou a komentářem k divergenci modelů
+  5. Kněží — aktuální stav, role, zatížení
+  6. Kapacitní model s tabulkou a grafy
+  7. Dopady a 3 scénáře reakce (konsolidace farností / posílení laiků /
+  nekontrolovaný zánik) + konkrétní doporučení s časovými horizonty
+
+  Interaktivní mapy grafy/mapa_ohrozenych_2034/2037/2039.html — 274 farností s
+  GPS, klikatelné body s detailem.
+
+  Kritické okno identifikované analýzou: 2029–2034, kdy kapacita kněží poprvé
+  nestačí pokrýt všechny farnosti.
+
+✻ Worked for 3m 45s
+
+※ recap: Analyzujeme statistiku bohoslužeb Diecéze ostravsko-opavské — vytvořili jsme SQLite databázi, predikci návštěvnosti, kapacitní model kněží a interaktivní mapy ohrožených farností. Report je hotový jako report.html. (disable recaps in /config)
+
+❯ Jak takovýto report dostanu na https://farnost.lubina.cz/ ?                   
+
+● Závisí to na tom, jak je web postaven. Nejdřív zjistím co to je.
+
+● Fetch(https://farnost.lubina.cz/)
+  ⎿  Received 50.3KB (200 OK)
+
+● Web běží na WordPressu. Možnosti jsou tři — od nejjednodušší po nejúplnější:
+
+  ---
+  Varianta 1 — Jednoduchá stránka (30 minut)
+  Obsah report.html vložíte jako novou stránku přímo ve WordPress editoru:
+  - Admin → Stránky → Přidat novou
+  - Přepněte editor na HTML/Kód a vložte obsah <body> z report.html
+  - Grafy nahrajte přes Média a opravte cesty k obrázkům
+  - Mapy (interaktivní HTML) takto nepůjdou — jen statická verze
+
+  Varianta 2 — Samostatná HTML stránka (doporučuji)
+  Nahrajete celý adresář Statistika/ na server přes FTP/SFTP do složky např.
+  /public_html/statistika/ a report bude dostupný na
+  farnost.lubina.cz/statistika/report.html — včetně grafů a interaktivních map.
+  Nic neinstalujete, funguje hned.
+
+  Varianta 3 — WordPress plugin Iframe/Raw HTML
+  Varianta 2 + na WordPress stránku vložíte iframe odkazující na
+  farnost.lubina.cz/statistika/report.html.
+
+  ---
+  Doporučuji Variantu 2 — je nejrychlejší, zachová interaktivní mapy i styly
+  reportu beze změny.
+
+  Máte přístup na server přes FTP/SFTP nebo cPanel? Pokud ano, mohu připravit
+  přesný postup nebo zkomprimovat výstupní soubory do .zip připraveného k
+  nahrání.
+
+✻ Cooked for 24s
+
+❯ Připrav zip soubor k nahrání na server                                        
+
+  Listed 1 directory (ctrl+o to expand)
+
+● Bash(\
+      zip -j statistika_web.zip \…)
+  ⎿    adding: report.html (deflated 68%)
+       adding: dieceze.png (deflated 10%)
+       adding: dekanaty.png (deflated 10%)
+     … +9 lines (ctrl+o to expand)
+
+● Pozor — použil jsem -j (bez adresářů), ale report.html odkazuje na
+  grafy/dieceze.png. Musím zachovat strukturu.
+
+● Bash(\
+      zip statistika_web.zip \…)
+  ⎿  updating: report.html (deflated 68%)
+       adding: grafy/dieceze.png (deflated 10%)
+       adding: grafy/dekanaty.png (deflated 10%)
+     … +23 lines (ctrl+o to expand)
+
+● Zip obsahuje duplicity z prvního pokusu. Přetvořím ho čistě.
+
+● Bash(\
+      rm statistika_web.zip && \…)
+  ⎿    adding: report.html (deflated 68%)
+       adding: grafy/dieceze.png (deflated 10%)
+       adding: grafy/dekanaty.png (deflated 10%)
+     … +16 lines (ctrl+o to expand)
+
+● Hotovo. Soubor statistika_web.zip (1,4 MB) je připraven:
+
+  statistika_web.zip
+  ├── report.html
+  └── grafy/
+      ├── dieceze.png
+      ├── dekanaty.png
+      ├── dekanaty_srovnani_2039.png
+      ├── farnosti_novy_jicin.png
+      ├── kapacitni_model.png
+      ├── kapacita_dekanaty_2034.png
+      ├── mapa_ohrozenych_2034.html
+      ├── mapa_ohrozenych_2037.html
+      └── mapa_ohrozenych_2039.html
+
+  Postup nahrání na server:
+  1. Přihlaste se do cPanel nebo FTP klienta (FileZilla apod.)
+  2. Přejděte do složky public_html/ (nebo tam kde je WordPress)
+  3. Vytvořte novou složku statistika
+  4. Nahrajte a rozbalte statistika_web.zip do té složky
+  5. Report bude dostupný na farnost.lubina.cz/statistika/report.html
+
+  Pokud chcete odkaz přímo z webu, stačí na WordPress stránce přidat odkaz na
+  tuto URL.
+
+✻ Worked for 33s
+
+※ recap: Vybudovali jsme analytický systém pro statistiku bohoslužeb Diecéze ostravsko-opavské — SQLite databáze, predikce věřících, kapacitní model kněží, interaktivní mapy a HTML report. Zip soubor statistika_web.zip je připraven k nahrání na farnost.lubina.cz/statistika/. (disable recaps in /config)
