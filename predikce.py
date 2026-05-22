@@ -1,9 +1,23 @@
 #!/usr/bin/env python3
 """
 Predikce počtu věřících na základě sčítání 1999–2024.
-Modely: exponenciální pokles + lineární regrese.
+
+Modely:
+- Exponenciální pokles: y = a·exp(b·t), fit OLS na log(y) (pouze body y>0)
+- Lineární regrese:    y = a + b·t
+- Recent trend (exp):  fit jen z posledních 2 bodů (lokální tempo)
+
 Úrovně: diecéze, děkanát, farnost.
-Výstup: tabulky predikce_dieceze, predikce_dekanat, predikce_farnost v scitani.db.
+
+Výstup: tabulky predikce_dieceze, predikce_dekanat, predikce_farnost v scitani.db,
+plus tabulka predikce_farnost_model s parametry modelu a R² (v log prostoru pro exp).
+
+Klíčové vlastnosti:
+- NULL hodnoty v scitani jsou zachovány jako NULL (nikoli mapovány na 0).
+- Predikce má sloupec validni (1/0) — 0 znamená méně než MIN_BODY validních pozorování
+  nebo R²_exp < R2_PRAH. Klient by neměl validni=0 predikce používat pro plánování.
+- 90% predikční interval (pred_lo, pred_hi) pro exp model je odvozen ze
+  standardní chyby reziduí v log prostoru.
 """
 
 import math
@@ -17,9 +31,16 @@ ROKY_HISTORICKE = [1999, 2004, 2009, 2014, 2019, 2024]
 ROKY_PREDIKCE   = [2029, 2034, 2039]
 VSECHNY_ROKY    = ROKY_HISTORICKE + ROKY_PREDIKCE
 
+MIN_BODY = 4        # minimální počet nenulových bodů pro důvěryhodný fit
+R2_PRAH  = 0.5      # exp R² (log space) pod tímto prahem → predikce není validní
+CI_Z     = 1.645    # 90% z-skóre pro predikční interval
 
-def fit_exp(roky: list[int], hodnoty: list[float]) -> tuple[float, float] | None:
-    """Fituje y = a * exp(b * (rok - 1999)) metodou OLS na log(y)."""
+
+# ── fit funkce ────────────────────────────────────────────────────────────────
+
+def fit_exp(roky: list[int], hodnoty: list[float]) -> dict | None:
+    """Fituje y = a·exp(b·t) metodou OLS na log(y), pouze body y > 0.
+    Vrací dict s a, b, sigma_log (rozptyl reziduí log y), r2_log nebo None."""
     t = np.array([r - 1999 for r in roky], dtype=float)
     y = np.array(hodnoty, dtype=float)
     mask = y > 0
@@ -29,99 +50,160 @@ def fit_exp(roky: list[int], hodnoty: list[float]) -> tuple[float, float] | None
     t_m = t[mask]
     b, log_a = np.polyfit(t_m, log_y, 1)
     a = math.exp(log_a)
-    return a, b
+
+    # R² v log prostoru (konzistentně s OLS minimalizovanou funkcí)
+    log_yhat = log_a + b * t_m
+    ss_res = float(np.sum((log_y - log_yhat) ** 2))
+    ss_tot = float(np.sum((log_y - log_y.mean()) ** 2))
+    r2_log = 1.0 - ss_res / ss_tot if ss_tot > 0 else 0.0
+
+    # Reziduální směrodatná odchylka v log prostoru (pro CI)
+    n = len(t_m)
+    sigma_log = math.sqrt(ss_res / max(n - 2, 1)) if n > 2 else 0.0
+
+    return {"a": a, "b": b, "n": n, "r2_log": r2_log, "sigma_log": sigma_log}
 
 
-def fit_lin(roky: list[int], hodnoty: list[float]) -> tuple[float, float]:
-    """Fituje y = a + b * (rok - 1999)."""
+def fit_lin(roky: list[int], hodnoty: list[float]) -> dict | None:
+    """Fituje y = a + b·t (ignoruje pouze NULL, ne nuly)."""
     t = np.array([r - 1999 for r in roky], dtype=float)
     y = np.array(hodnoty, dtype=float)
+    if len(y) < 2:
+        return None
     b, a = np.polyfit(t, y, 1)
-    return a, b
+    yhat = a + b * t
+    ss_res = float(np.sum((y - yhat) ** 2))
+    ss_tot = float(np.sum((y - y.mean()) ** 2))
+    r2 = 1.0 - ss_res / ss_tot if ss_tot > 0 else 0.0
+    return {"a": a, "b": b, "n": len(y), "r2": r2}
 
 
-def predikuj(a_exp, b_exp, a_lin, b_lin, rok: int) -> tuple[float | None, float]:
+def fit_recent(roky: list[int], hodnoty: list[float], n_last: int = 2) -> dict | None:
+    """Fituje exp model z posledních n_last bodů (lokální tempo)."""
+    pairs = [(r, h) for r, h in zip(roky, hodnoty) if h is not None and h > 0]
+    if len(pairs) < n_last:
+        return None
+    pairs = pairs[-n_last:]
+    r2, h2 = pairs[-1]
+    r1, h1 = pairs[0]
+    if r2 == r1:
+        return None
+    b = (math.log(h2) - math.log(h1)) / (r2 - r1)
+    # a tak, aby model šel přesně přes poslední bod
+    a = h2 / math.exp(b * (r2 - 1999))
+    return {"a": a, "b": b, "n": n_last}
+
+
+# ── predikce + CI ─────────────────────────────────────────────────────────────
+
+def predikuj_exp(params: dict, rok: int) -> tuple[float, float, float] | None:
+    """Vrátí (point, lo, hi) pro 90% predikční interval v exp modelu."""
+    if params is None:
+        return None
     t = rok - 1999
-    exp_val = max(0.0, a_exp * math.exp(b_exp * t)) if a_exp is not None else None
-    lin_val = max(0.0, a_lin + b_lin * t)
-    return exp_val, lin_val
+    log_yhat = math.log(params["a"]) + params["b"] * t
+    sigma = params.get("sigma_log", 0.0)
+    point = math.exp(log_yhat)
+    lo = math.exp(log_yhat - CI_Z * sigma)
+    hi = math.exp(log_yhat + CI_Z * sigma)
+    return max(0.0, point), max(0.0, lo), max(0.0, hi)
 
 
-def r2(roky, hodnoty, a, b, model="exp") -> float:
-    y = np.array(hodnoty, dtype=float)
-    t = np.array([r - 1999 for r in roky], dtype=float)
-    if model == "exp":
-        y_hat = np.array([max(0.0, a * math.exp(b * ti)) for ti in t])
+def predikuj_lin(params: dict, rok: int) -> float | None:
+    if params is None:
+        return None
+    t = rok - 1999
+    return max(0.0, params["a"] + params["b"] * t)
+
+
+# ── orchestrace ───────────────────────────────────────────────────────────────
+
+def zpracuj_skupinu(roky: list[int], hodnoty: list[float | None]) -> dict:
+    """
+    Vrátí dict s parametry modelů a predikcemi pro ROKY_PREDIKCE.
+    Pole hodnoty může obsahovat None (NULL); takové body se ignorují.
+    """
+    pairs = [(r, h) for r, h in zip(roky, hodnoty) if h is not None]
+    if len(pairs) < 2:
+        return {
+            "validni": 0, "duvod": "méně než 2 pozorování",
+            "exp": None, "lin": None, "recent": None,
+        }
+    r_v = [p[0] for p in pairs]
+    h_v = [p[1] for p in pairs]
+
+    exp_p = fit_exp(r_v, h_v)
+    lin_p = fit_lin(r_v, h_v)
+    rec_p = fit_recent(r_v, h_v, n_last=2)
+
+    # Validita
+    n_pos = sum(1 for h in h_v if h > 0)
+    if n_pos < MIN_BODY:
+        validni = 0
+        duvod = f"jen {n_pos} kladných pozorování (< {MIN_BODY})"
+    elif exp_p is None or exp_p["r2_log"] < R2_PRAH:
+        validni = 0
+        duvod = f"R²_exp (log space) = {exp_p['r2_log']:.2f} < {R2_PRAH}" if exp_p else "exp fit selhal"
     else:
-        y_hat = a + b * t
-    ss_res = np.sum((y - y_hat) ** 2)
-    ss_tot = np.sum((y - np.mean(y)) ** 2)
-    return 1.0 - ss_res / ss_tot if ss_tot > 0 else 0.0
+        validni = 1
+        duvod = None
 
-
-def zpracuj_skupinu(roky: list[int], hodnoty: list[float]) -> dict:
-    """Vrátí dict s parametry modelu a predikcemi."""
-    exp_params = fit_exp(roky, hodnoty)
-    a_e, b_e = exp_params if exp_params else (None, None)
-    a_l, b_l = fit_lin(roky, hodnoty)
-
-    r2_exp = r2(roky, hodnoty, a_e, b_e, "exp") if a_e is not None else None
-    r2_lin = r2(roky, hodnoty, a_l, b_l, "lin")
-
-    result = {
-        "exp_a": a_e, "exp_b": b_e, "r2_exp": r2_exp,
-        "lin_a": a_l, "lin_b": b_l, "r2_lin": r2_lin,
-    }
+    pred = {}
     for rok in ROKY_PREDIKCE:
-        e_val, l_val = predikuj(a_e, b_e, a_l, b_l, rok)
-        result[f"exp_{rok}"] = round(e_val) if e_val is not None else None
-        result[f"lin_{rok}"] = round(l_val)
-    return result
+        exp_t = predikuj_exp(exp_p, rok) if exp_p else None
+        lin_v = predikuj_lin(lin_p, rok) if lin_p else None
+        rec_t = predikuj_exp(rec_p, rok) if rec_p else None
+        pred[rok] = {
+            "exp":     round(exp_t[0]) if exp_t else None,
+            "exp_lo":  round(exp_t[1]) if exp_t else None,
+            "exp_hi":  round(exp_t[2]) if exp_t else None,
+            "lin":     round(lin_v) if lin_v is not None else None,
+            "recent":  round(rec_t[0]) if rec_t else None,
+        }
+    return {
+        "validni": validni, "duvod": duvod,
+        "exp": exp_p, "lin": lin_p, "recent": rec_p, "pred": pred,
+    }
 
 
-def create_table(cur, nazev: str, klice: list[tuple[str, str]]) -> None:
-    cols = "\n".join(f"    {k} {t}," for k, t in klice)
-    cur.execute(f"""
-        CREATE TABLE IF NOT EXISTS {nazev} (
-        {cols}
-        PRIMARY KEY ({klice[0][0]})
-        )
-    """)
-
+# ── DB inicializace ───────────────────────────────────────────────────────────
 
 def main() -> None:
     conn = sqlite3.connect(DB_FILE)
     cur = conn.cursor()
 
-    # ── 1. Agregace historických dat ─────────────────────────────────────────
+    # ── 1. Agregace historických dat (NULL je zachováno) ─────────────────────
     def nacti(group_by: str) -> dict:
         cur.execute(f"""
-            SELECT {group_by}, rok, SUM(osob_celkem)
+            SELECT {group_by}, rok,
+                   SUM(CASE WHEN osob_celkem IS NULL THEN 0 ELSE 1 END) AS pocet,
+                   SUM(osob_celkem) AS celkem
             FROM scitani
             GROUP BY {group_by}, rok
             ORDER BY {group_by}, rok
         """)
         data: dict = {}
-        for skupina, rok, celkem in cur.fetchall():
-            data.setdefault(skupina, {})[rok] = celkem or 0
+        for skupina, rok, pocet, celkem in cur.fetchall():
+            # Pokud žádná farnost ve skupině neměla pro tento rok hodnotu, je NULL
+            data.setdefault(skupina, {})[rok] = celkem if pocet > 0 else None
         return data
 
-    diec_data: dict[int, float] = {}
-    cur.execute("SELECT rok, SUM(osob_celkem) FROM scitani GROUP BY rok ORDER BY rok")
-    for rok, celkem in cur.fetchall():
-        diec_data[rok] = celkem or 0
+    diec_data: dict[int, float | None] = {}
+    cur.execute("""
+        SELECT rok,
+               SUM(CASE WHEN osob_celkem IS NULL THEN 0 ELSE 1 END) AS pocet,
+               SUM(osob_celkem) AS celkem
+        FROM scitani GROUP BY rok ORDER BY rok
+    """)
+    for rok, pocet, celkem in cur.fetchall():
+        diec_data[rok] = celkem if pocet > 0 else None
 
-    dek_data  = nacti("dekanat")
-    far_data  = nacti("farnost")
+    dek_data = nacti("dekanat")
+    far_data = nacti("farnost")
 
-    # ── 2. Tabulky predikce ───────────────────────────────────────────────────
-    pred_cols = [
-        ("rok",     "INTEGER NOT NULL"),
-        ("exp_val", "REAL"),
-        ("lin_val", "REAL"),
-    ]
-
-    for tbl in ("predikce_dieceze", "predikce_dekanat", "predikce_farnost"):
+    # ── 2. Drop & recreate tabulky ────────────────────────────────────────────
+    for tbl in ("predikce_dieceze", "predikce_dekanat",
+                "predikce_farnost", "predikce_farnost_model"):
         cur.execute(f"DROP TABLE IF EXISTS {tbl}")
 
     cur.execute("""
@@ -129,7 +211,10 @@ def main() -> None:
             rok      INTEGER PRIMARY KEY,
             hodnota  INTEGER,
             exp_val  REAL,
-            lin_val  REAL
+            exp_lo   REAL,
+            exp_hi   REAL,
+            lin_val  REAL,
+            recent_val REAL
         )
     """)
     cur.execute("""
@@ -138,9 +223,13 @@ def main() -> None:
             rok      INTEGER NOT NULL,
             hodnota  INTEGER,
             exp_val  REAL,
+            exp_lo   REAL,
+            exp_hi   REAL,
             lin_val  REAL,
-            r2_exp   REAL,
+            recent_val REAL,
+            r2_exp_log REAL,
             r2_lin   REAL,
+            validni  INTEGER,
             PRIMARY KEY (dekanat, rok)
         )
     """)
@@ -150,71 +239,128 @@ def main() -> None:
             rok      INTEGER NOT NULL,
             hodnota  INTEGER,
             exp_val  REAL,
+            exp_lo   REAL,
+            exp_hi   REAL,
             lin_val  REAL,
-            r2_exp   REAL,
+            recent_val REAL,
+            r2_exp_log REAL,
             r2_lin   REAL,
+            validni  INTEGER,
             PRIMARY KEY (farnost, rok)
+        )
+    """)
+    cur.execute("""
+        CREATE TABLE predikce_farnost_model (
+            farnost   TEXT PRIMARY KEY,
+            exp_a     REAL,
+            exp_b     REAL,
+            exp_n     INTEGER,
+            r2_exp_log REAL,
+            sigma_log REAL,
+            lin_a     REAL,
+            lin_b     REAL,
+            r2_lin    REAL,
+            recent_a  REAL,
+            recent_b  REAL,
+            validni   INTEGER,
+            duvod_invaliditn TEXT
         )
     """)
 
     # ── 3. Diecéze ────────────────────────────────────────────────────────────
-    d_roky = [r for r in ROKY_HISTORICKE if r in diec_data]
-    d_hod  = [diec_data[r] for r in d_roky]
+    d_roky = ROKY_HISTORICKE
+    d_hod  = [diec_data.get(r) for r in d_roky]
     d_res  = zpracuj_skupinu(d_roky, d_hod)
 
     for rok in ROKY_HISTORICKE:
-        cur.execute("INSERT INTO predikce_dieceze VALUES (?,?,?,?)",
-                    (rok, diec_data.get(rok), None, None))
+        cur.execute("INSERT INTO predikce_dieceze VALUES (?,?,?,?,?,?,?)",
+                    (rok, diec_data.get(rok), None, None, None, None, None))
     for rok in ROKY_PREDIKCE:
-        cur.execute("INSERT INTO predikce_dieceze VALUES (?,?,?,?)",
-                    (rok, None, d_res[f"exp_{rok}"], d_res[f"lin_{rok}"]))
+        p = d_res["pred"][rok]
+        cur.execute("INSERT INTO predikce_dieceze VALUES (?,?,?,?,?,?,?)",
+                    (rok, None, p["exp"], p["exp_lo"], p["exp_hi"], p["lin"], p["recent"]))
 
     print("=== DIECÉZE ===")
-    print(f"  Exp model: a={d_res['exp_a']:.1f}, b={d_res['exp_b']:.4f}, R²={d_res['r2_exp']:.3f}")
-    print(f"  Lin model: R²={d_res['r2_lin']:.3f}")
+    if d_res["exp"]:
+        print(f"  Exp model: a={d_res['exp']['a']:.1f}, b={d_res['exp']['b']:.4f}, "
+              f"R²_log={d_res['exp']['r2_log']:.3f}, σ_log={d_res['exp']['sigma_log']:.3f}")
+    if d_res["recent"]:
+        annual = (math.exp(d_res['recent']['b']) - 1) * 100
+        print(f"  Recent (poslední 2 body): {annual:.2f} %/rok")
     for rok in ROKY_PREDIKCE:
-        print(f"  {rok}: exp={d_res[f'exp_{rok}']:,}  lin={d_res[f'lin_{rok}']:,}")
+        p = d_res["pred"][rok]
+        print(f"  {rok}: exp={p['exp']:,} (90% CI {p['exp_lo']:,}–{p['exp_hi']:,})  "
+              f"lin={p['lin']:,}  recent={p['recent']:,}")
 
     # ── 4. Děkanáty ───────────────────────────────────────────────────────────
     print("\n=== DĚKANÁTY ===")
     for dek, rok_data in sorted(dek_data.items()):
-        roky = [r for r in ROKY_HISTORICKE if r in rok_data]
-        hod  = [rok_data[r] for r in roky]
-        res  = zpracuj_skupinu(roky, hod)
+        hod = [rok_data.get(r) for r in ROKY_HISTORICKE]
+        res = zpracuj_skupinu(ROKY_HISTORICKE, hod)
         for rok in ROKY_HISTORICKE:
-            cur.execute("INSERT INTO predikce_dekanat VALUES (?,?,?,?,?,?,?)",
-                        (dek, rok, rok_data.get(rok), None, None, None, None))
+            cur.execute("INSERT INTO predikce_dekanat VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                        (dek, rok, rok_data.get(rok),
+                         None, None, None, None, None, None, None, None))
         for rok in ROKY_PREDIKCE:
-            cur.execute("INSERT INTO predikce_dekanat VALUES (?,?,?,?,?,?,?)",
+            p = res["pred"][rok] if "pred" in res else {"exp": None, "exp_lo": None, "exp_hi": None, "lin": None, "recent": None}
+            cur.execute("INSERT INTO predikce_dekanat VALUES (?,?,?,?,?,?,?,?,?,?,?)",
                         (dek, rok, None,
-                         res[f"exp_{rok}"], res[f"lin_{rok}"],
-                         res["r2_exp"], res["r2_lin"]))
-        print(f"  {dek}: 2029 exp={res['exp_2029']:,} lin={res['lin_2029']:,}  (R²_exp={res['r2_exp']:.3f})")
+                         p["exp"], p["exp_lo"], p["exp_hi"], p["lin"], p["recent"],
+                         res["exp"]["r2_log"] if res.get("exp") else None,
+                         res["lin"]["r2"] if res.get("lin") else None,
+                         res["validni"]))
+        if res.get("exp"):
+            p = res["pred"][2029]
+            print(f"  {dek:<12}: 2029 exp={p['exp']:>5} ({p['exp_lo']:>5}–{p['exp_hi']:>5})  "
+                  f"R²_log={res['exp']['r2_log']:.3f}  validni={res['validni']}")
 
     # ── 5. Farnosti ───────────────────────────────────────────────────────────
-    print("\n=== FARNOSTI (ukázka Nový Jičín) ===")
-    nj_farnosti = set()
-    cur.execute("SELECT DISTINCT farnost FROM scitani WHERE dekanat='Nový Jičín'")
-    nj_farnosti = {r[0] for r in cur.fetchall()}
-
+    print("\n=== FARNOSTI ===")
+    n_validni = 0
+    n_invalidni = 0
     for farnost, rok_data in sorted(far_data.items()):
-        roky = [r for r in ROKY_HISTORICKE if r in rok_data]
-        hod  = [rok_data[r] for r in roky]
-        res  = zpracuj_skupinu(roky, hod)
+        hod = [rok_data.get(r) for r in ROKY_HISTORICKE]
+        res = zpracuj_skupinu(ROKY_HISTORICKE, hod)
+
         for rok in ROKY_HISTORICKE:
-            cur.execute("INSERT INTO predikce_farnost VALUES (?,?,?,?,?,?,?)",
-                        (farnost, rok, rok_data.get(rok), None, None, None, None))
+            cur.execute("INSERT INTO predikce_farnost VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                        (farnost, rok, rok_data.get(rok),
+                         None, None, None, None, None, None, None, None))
         for rok in ROKY_PREDIKCE:
-            cur.execute("INSERT INTO predikce_farnost VALUES (?,?,?,?,?,?,?)",
+            p = res["pred"][rok] if "pred" in res else {"exp": None, "exp_lo": None, "exp_hi": None, "lin": None, "recent": None}
+            cur.execute("INSERT INTO predikce_farnost VALUES (?,?,?,?,?,?,?,?,?,?,?)",
                         (farnost, rok, None,
-                         res[f"exp_{rok}"], res[f"lin_{rok}"],
-                         res["r2_exp"], res["r2_lin"]))
-        if farnost in nj_farnosti:
-            print(f"  {farnost}: 2029 exp={res['exp_2029']} lin={res['lin_2029']}")
+                         p["exp"], p["exp_lo"], p["exp_hi"], p["lin"], p["recent"],
+                         res["exp"]["r2_log"] if res.get("exp") else None,
+                         res["lin"]["r2"] if res.get("lin") else None,
+                         res["validni"]))
+
+        # Tabulka modelů (1 řádek na farnost)
+        cur.execute("INSERT INTO predikce_farnost_model VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                    (farnost,
+                     res["exp"]["a"]     if res.get("exp") else None,
+                     res["exp"]["b"]     if res.get("exp") else None,
+                     res["exp"]["n"]     if res.get("exp") else None,
+                     res["exp"]["r2_log"]   if res.get("exp") else None,
+                     res["exp"]["sigma_log"] if res.get("exp") else None,
+                     res["lin"]["a"]     if res.get("lin") else None,
+                     res["lin"]["b"]     if res.get("lin") else None,
+                     res["lin"]["r2"]    if res.get("lin") else None,
+                     res["recent"]["a"]  if res.get("recent") else None,
+                     res["recent"]["b"]  if res.get("recent") else None,
+                     res["validni"],
+                     res.get("duvod")))
+
+        n_validni += res["validni"]
+        n_invalidni += 1 - res["validni"]
+
+    print(f"  Validních predikcí (R²_log ≥ {R2_PRAH} a ≥ {MIN_BODY} bodů): {n_validni}")
+    print(f"  Neplatných: {n_invalidni}")
 
     conn.commit()
     conn.close()
-    print("\nHotovo — tabulky predikce_dieceze, predikce_dekanat, predikce_farnost uloženy.")
+    print("\nHotovo — tabulky predikce_dieceze, predikce_dekanat, predikce_farnost, "
+          "predikce_farnost_model uloženy.")
 
 
 if __name__ == "__main__":

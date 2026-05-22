@@ -20,7 +20,7 @@
     font-family: "Segoe UI", system-ui, sans-serif;
     font-size: 15px; line-height: 1.65;
     color: var(--text); background: #fff;
-    max-width: 960px; margin: 0 auto; padding: 32px 24px 80px;
+    max-width: 980px; margin: 0 auto; padding: 32px 24px 80px;
   }
   h1 { font-size: 2rem; font-weight: 700; margin-bottom: .3em; }
   h2 { font-size: 1.4rem; font-weight: 700; margin: 2.5em 0 .6em;
@@ -32,14 +32,10 @@
   a  { color: var(--blue); }
 
   .subtitle { color: var(--gray); font-size: 1rem; margin-bottom: .2em; }
-  .date     { color: var(--gray); font-size: .9rem; }
 
   .toc { background: var(--light); border-radius: 8px; padding: 18px 24px; margin: 2em 0; }
   .toc h3 { margin-top: 0; }
-  .toc ol { margin-left: 1.2em; }
-  .toc li { margin: .3em 0; }
 
-  /* KPI cards */
   .kpi-row { display: flex; gap: 16px; flex-wrap: wrap; margin: 1.2em 0; }
   .kpi {
     flex: 1 1 180px; background: var(--light); border-radius: 10px;
@@ -52,7 +48,6 @@
   .kpi.green .num { color: var(--green); }
   .kpi.orange .num { color: var(--orange); }
 
-  /* Tables */
   table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: .9rem; }
   th { background: var(--blue); color: #fff; padding: 8px 12px; text-align: left; }
   td { padding: 7px 12px; border-bottom: 1px solid var(--border); }
@@ -63,7 +58,6 @@
   td.grn  { color: var(--green); font-weight: 600; }
   td.ora  { color: var(--orange);font-weight: 600; }
 
-  /* Charts */
   .chart { text-align: center; margin: 1.5em 0; }
   .chart img { max-width: 100%; border-radius: 8px;
                box-shadow: 0 2px 10px rgba(0,0,0,.1); }
@@ -71,7 +65,6 @@
     font-size: .85rem; color: var(--gray); margin-top: .5em; font-style: italic;
   }
 
-  /* Callout boxes */
   .box { border-radius: 8px; padding: 14px 18px; margin: 1.2em 0; }
   .box.info   { background: #eff6ff; border-left: 4px solid var(--blue); }
   .box.warn   { background: #fff7ed; border-left: 4px solid var(--orange); }
@@ -79,7 +72,6 @@
   .box.ok     { background: #f0fdf4; border-left: 4px solid var(--green); }
   .box strong { display: block; margin-bottom: .3em; }
 
-  /* Scenario cards */
   .scenarios { display: flex; gap: 16px; flex-wrap: wrap; margin: 1.2em 0; }
   .scenario {
     flex: 1 1 260px; border-radius: 10px; padding: 18px 20px;
@@ -90,6 +82,9 @@
   .scenario.s2 { border-color: var(--orange); background: #fff7ed; }
   .scenario.s3 { border-color: var(--red);    background: #fef2f2; }
 
+  .changelog { background: #fdf4ff; border-left: 4px solid #a855f7; padding: 12px 18px; border-radius: 6px; margin: 1.5em 0; font-size: .92rem; }
+  .changelog ul { margin-left: 1.4em; }
+
   footer { margin-top: 4em; padding-top: 1em; border-top: 1px solid var(--border);
            font-size: .8rem; color: var(--gray); }
 </style>
@@ -98,7 +93,7 @@
 
 <p class="subtitle">Diecéze ostravsko-opavská</p>
 <h1>Statistická analýza návštěvnosti bohoslužeb</h1>
-<p class="date">Zpracováno: květen 2026 &nbsp;·&nbsp; Data: doo.cz, ČBK sčítání 1999–2024</p>
+<p class="subtitle">Vývoj 1999–2024, prognóza do 2039, kapacitní model — verze 2</p>
 
 <div class="toc">
   <h3>Obsah</h3>
@@ -107,48 +102,77 @@
     <li><a href="#metodika">Metodika analýzy</a></li>
     <li><a href="#trendy">Historické trendy</a></li>
     <li><a href="#prognoza">Prognóza 2029–2039</a></li>
+    <li><a href="#validace">Validace predikčního modelu</a></li>
     <li><a href="#knezi">Kněží v diecézi</a></li>
     <li><a href="#kapacita">Kapacitní model</a></li>
+    <li><a href="#citlivost">Citlivostní analýza</a></li>
     <li><a href="#dopady">Dopady a scénáře reakce</a></li>
   </ol>
+</div>
+
+<div class="changelog">
+  <strong>Verze 2 — co se změnilo oproti první analýze</strong>
+  <ul>
+    <li>NULL hodnoty ve sčítání už nejsou mapovány na 0 — 100 farností s neúplnými řadami má nyní explicitně neplatnou predikci (flag <code>validni=0</code>).</li>
+    <li>R² pro exp. model počítáme v log prostoru (konzistentně s OLS fitem).</li>
+    <li>Přidán 90 % predikční interval (CI) a třetí model „Recent" (lokální tempo z posledních 2 bodů).</li>
+    <li>Provedena leave-2024-out validace: exp model na diecézi přestřeluje o +16,6 %. <strong>Skutečný pokles akceleruje rychleji než exp model předpokládá</strong> — viz sekce 5.</li>
+    <li>Počet kněží 186 nyní odvozen z databáze (dříve hardcoded 192/198). Geografický kapacitní model — kapacita kněží alokovaná po děkanátech.</li>
+    <li>Citlivostní analýza pro 3 scénáře poklesu kněží × 3 limity farností/kněz.</li>
+    <li>Korekce dat pro Lubinu 2014 nyní zachovává konzistenci muž/žena (97/113 místo 110/128).</li>
+  </ul>
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════ -->
 <h2 id="vstupy">1. Datové zdroje a vstupy</h2>
 
-<p>Analýza vychází ze čtyř datových zdrojů:</p>
-
 <h3>1.1 Sčítání účastníků bohoslužeb (ČBK, 1999–2024)</h3>
 <p>Česká biskupská konference organizuje celostátní sčítání každých pět let, vždy o druhé říjnové neděli. Účastníci anonymně vyplňují lístek s věkem, pohlavím a ekonomickou aktivitou. Data pokrývají <strong>277 farností</strong> Diecéze ostravsko-opavské za roky 1999, 2004, 2009, 2014, 2019 a 2024 — celkem <strong>1 662 záznamů</strong>. Zdrojem je soubor <em>scitani-srovnani-1999-2024-web.csv</em> zveřejněný diecézí.</p>
+<p>Pro <strong>57 řádků</strong> (z 1 662) je <code>osob_celkem</code> NULL — typicky malé farnosti, které nebyly tehdy součástí sčítání. Tyto chybějící hodnoty jsou v této verzi explicitně rozlišeny od skutečné nuly.</p>
 
 <h3>1.2 Diecézní katalog (doo.cz, 2025)</h3>
-<p>Ze stránek <a href="https://doo.cz/katalog/farnosti/">doo.cz/katalog/farnosti/</a> byla stažena data o <strong>278 farnostech</strong> a jejich duchovní správě. Celkem bylo identifikováno <strong>198 kněží</strong> přiřazených k farnostem, s rozlišením rolí (farář, administrátor excurrendo, farní vikář apod.).</p>
+<p>Ze stránek <a href="https://doo.cz/katalog/farnosti/">doo.cz/katalog/farnosti/</a> bylo staženo personální obsazení <strong>277 farností</strong>. V databázi je celkem <strong>249 unikátních osob</strong>, z toho <strong>186 aktivně sloužících kněží</strong> (Farář, Administrátor, Adm. excurrendo, Farní vikář, Výpomocný duchovní). Zbytek (63) tvoří jáhni, pastorační asistenti a kněží na odpočinku.</p>
 
-<h3>1.3 Wikipedia — celodiecézní statistiky</h3>
-<p>Z hesla <em>Diecéze ostravsko-opavská</em> byla převzata historická data o počtech kněží, řeholníků, křtů a podílu katolíků na obyvatelstvu za roky 1999–2019.</p>
+<h3>1.3 Wikipedia — celodiecézní statistiky 1999–2019</h3>
+<p>Z hesla <em>Diecéze ostravsko-opavská</em> jsou převzata historická data o počtech kněží, řeholníků, křtů a podílu katolíků. <strong>Údaje za 2020–2024 zatím chybí</strong>; doporučení pro další aktualizaci.</p>
 
-<h3>1.4 Předpoklad poklesu kněží</h3>
-<p>Predikce ubývání kněží vychází z odborného konsenzu a demografického trendu: <strong>−50 % za 10 let</strong> (2024→2034). Tento předpoklad je konzervativní — nástup do semináře v diecézi dlouhodobě nepokrývá přirozené odchody.</p>
+<h3>1.4 Předpoklady o vývoji počtu kněží</h3>
+<p>Hlavní scénář (<em>base</em>) předpokládá <strong>−50 % za 10 let</strong>. Alternativně počítáme <em>mild</em> (−30 %/10 let) a <em>severe</em> (−65 %/10 let). Předpoklad není odvozen z dat — neexistuje historická časová řada poklesu kněží v DOO 2020–2024 — slouží jako pracovní hypotéza. Viz citlivostní analýza v sekci 8.</p>
 
 <!-- ═══════════════════════════════════════════════════════════ -->
 <h2 id="metodika">2. Metodika analýzy</h2>
 
 <h3>2.1 Regresní modely predikce</h3>
-<p>Pro každou entitu (farnost, děkanát, diecéze) jsou fitovány dva modely na historických datech 1999–2024:</p>
+<p>Pro každou entitu (farnost, děkanát, diecéze) jsou fitovány tři modely na historických datech 1999–2024:</p>
 <ul>
-  <li><strong>Exponenciální pokles</strong> — <code>y = a · e<sup>b·t</sup></code>, kde <em>t</em> je počet let od roku 1999. Model předpokládá, že relativní tempo poklesu je konstantní — malá komunita klesá stejně rychle procentuálně jako velká. Demograficky přirozenější.</li>
-  <li><strong>Lineární regrese</strong> — <code>y = a + b·t</code>. Jednodušší, konzervativnější ve střednědobém horizontu, ale pro delší horizont vede k nerealisticky nízkým nebo záporným hodnotám.</li>
+  <li><strong>Exponenciální pokles</strong> — <code>y = a · e<sup>b·t</sup></code>, OLS na log(y) (pouze body y &gt; 0). Demograficky přirozený model konstantního relativního tempa.</li>
+  <li><strong>Lineární regrese</strong> — <code>y = a + b·t</code>. Pro delší horizont vede k záporným hodnotám (clipované na 0).</li>
+  <li><strong>Recent (lokální tempo)</strong> — exp model fitnutý jen z posledních dvou bodů (2019, 2024). Reaguje na akceleraci posledních let.</li>
 </ul>
-<p>Kvalita fitu je hodnocena koeficientem determinace <strong>R²</strong>. Prognózy jsou vytvořeny pro roky 2029, 2034 a 2039.</p>
 
-<div class="box info">
-  <strong>Upozornění k interpretaci</strong>
-  Predikce jsou extrapolací stávajícího trendu. Nezahrnují možné změny — evangelizační aktivity, migraci, změnu demografické struktury nebo reformu farní struktury. Slouží jako <em>„co se stane, pokud se nic nezmění"</em> scénář.
-</div>
+<p><strong>Validita predikce</strong>: predikce je označena za neplatnou (<code>validni = 0</code>), pokud:</p>
+<ul>
+  <li>farnost má méně než 4 pozorování s y &gt; 0, nebo</li>
+  <li>R² exp modelu v log prostoru je &lt; 0,5.</li>
+</ul>
+<p>Z 277 farností je <strong>177 platných predikcí (64 %)</strong> a 100 neplatných. Neplatné nelze pro plánování použít — typicky malé farnosti s nesouvislými řadami (Býkov, Travná, Zálesí, atd.).</p>
+
+<p>Kromě bodové predikce model počítá i <strong>90 % predikční interval</strong> ze směrodatné odchylky reziduí v log prostoru.</p>
 
 <h3>2.2 Kapacitní model</h3>
-<p>Model kombinuje predikovaný počet kněží s počtem farností a odhaduje, které farnosti ztratí pravidelnou pastorální péči. Klíčový parametr: <strong>max. 2 farnosti na kněze</strong> — limit odpovídající schopnosti celebrovat nedělní mši v každé farnosti každou neděli (staggered times).</p>
-<p>Přidělování probíhá prioritizací podle velikosti: nejprve jsou obsluhovány farnosti s nejvyšší předpokládanou návštěvností. Farnosti mimo kapacitu jsou označeny jako <em>„ohrožené"</em>.</p>
+<p>Model kombinuje projektovaný počet kněží s počtem farností a odhaduje, které farnosti ztratí pravidelnou pastorální péči. Klíčové parametry:</p>
+<ul>
+  <li><strong>Počet kněží v 2024</strong>: 186 (odvozeno z DB).</li>
+  <li><strong>Pokles kněží</strong>: 3 scénáře (mild/base/severe).</li>
+  <li><strong>Max. farností na kněze</strong>: 3 scénáře (2, 3, 4).</li>
+  <li><strong>Geografické přidělování</strong>: kapacita kněží se rozdělí mezi děkanáty podle dnešního stavu, pokrytí se počítá v rámci děkanátu (kněz z Frýdku nemůže sloužit v Jeseníku).</li>
+</ul>
+<p>V rámci děkanátu jsou farnosti přidělovány podle velikosti — nejprve největší.</p>
+
+<div class="box info">
+  <strong>Limitace modelu</strong>
+  Predikce extrapolují stávající trend. Nezachycují strukturální změny — slučování farností, evangelizační aktivity, migraci. Slouží jako scénář „co se stane, pokud se nic nezmění".
+</div>
 
 <!-- ═══════════════════════════════════════════════════════════ -->
 <h2 id="trendy">3. Historické trendy</h2>
@@ -173,11 +197,11 @@
 </div>
 
 <h3>3.1 Vývoj celé diecéze</h3>
-<p>Za 25 let (1999–2024) klesla návštěvnost nedělních bohoslužeb v Diecézi ostravsko-opavské o <strong>51 %</strong> — z 73 266 na 36 188 účastníků. Pokles je kontinuální bez výrazného zpomalení; v každém pětiletém období diecéze ztratila 8–15 % účastníků.</p>
+<p>Za 25 let (1999–2024) klesla návštěvnost o <strong>51 %</strong>. Důležitý detail: pokles akceleruje. Pětileté propady byly −8 % (1999→2004), −8 %, −15 %, −12 %, <strong>−22 %</strong> (2019→2024). Poslední pětileté období je nejsilnější — pravděpodobně postcovidový efekt.</p>
 
 <figure class="chart">
   <img src="grafy/dieceze.png" alt="Vývoj návštěvnosti — diecéze">
-  <figcaption>Graf 1: Historický vývoj a prognóza návštěvnosti bohoslužeb v celé diecézi</figcaption>
+  <figcaption>Graf 1: Historický vývoj a tři modely predikce (exp s 90 % CI, lin, recent)</figcaption>
 </figure>
 
 <h3>3.2 Srovnání děkanátů</h3>
@@ -207,78 +231,100 @@
   </tbody>
 </table>
 
-<p>Nejméně zasaženy jsou městské a příměstské děkanáty Frýdek, Bílovec a Jeseník. Nejsilnější pokles zaznamenaly průmyslové oblasti Karviná a Bruntál (−60,6 %) a Opava (−56,6 %).</p>
-
 <figure class="chart">
   <img src="grafy/dekanaty.png" alt="Vývoj podle děkanátů">
-  <figcaption>Graf 2: Historický vývoj a prognóza návštěvnosti podle všech 11 děkanátů</figcaption>
+  <figcaption>Graf 2: Vývoj a predikce podle všech 11 děkanátů</figcaption>
 </figure>
 
 <h3>3.3 Děkanát Nový Jičín — farnosti</h3>
-<p>Děkanát Nový Jičín (27 farností) sleduje diecézní průměr s poklesem −52 % za 25 let. Vývoj je ale silně nerovnoměrný. Farnosti Veřovice, Albrechtičky a Mořkov ztratily přes 70 % účastníků, zatímco Bartošovice zaznamenaly mírný <em>nárůst</em> a Lubina klesá nejpomaleji (−28 %).</p>
+<p>Děkanát NJ (27 farností) sleduje diecézní průměr (−52 %). Stabilní jsou Lubina (−28 %), Bartošovice (+9 %), s rychlým poklesem Veřovice (−76 %).</p>
 
 <figure class="chart">
   <img src="grafy/farnosti_novy_jicin.png" alt="Farnosti děkanátu Nový Jičín">
-  <figcaption>Graf 3: Historický vývoj a prognóza pro 27 farností děkanátu Nový Jičín</figcaption>
+  <figcaption>Graf 3: 27 farností NJ; u farností s nedostatečnými daty je predikce vynechána</figcaption>
 </figure>
 
 <!-- ═══════════════════════════════════════════════════════════ -->
 <h2 id="prognoza">4. Prognóza 2029–2039</h2>
-
-<p>Oba modely (exponenciální i lineární) jsou fitovány na 6 datových bodech. Exponenciální model má pro celou diecézi R² = 0,959, lineární R² = 0,989 — oba dobře popisují historický trend.</p>
 
 <table>
   <thead>
     <tr>
       <th>Rok</th>
       <th class="num">Skutečnost</th>
-      <th class="num">Exp. model</th>
-      <th class="num">Lin. model</th>
-      <th class="num">Exp. vs. 2024</th>
+      <th class="num">Exp model</th>
+      <th class="num">90 % CI exp</th>
+      <th class="num">Lin model</th>
+      <th class="num">Recent (lokální)</th>
     </tr>
   </thead>
   <tbody>
-    <tr><td>1999</td><td class="num">73 266</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>
-    <tr><td>2024</td><td class="num">36 188</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>
-    <tr><td>2029</td><td class="num">—</td><td class="num">33 966</td><td class="num">30 689</td><td class="num ora">−6 %</td></tr>
-    <tr><td>2034</td><td class="num">—</td><td class="num">29 628</td><td class="num">23 370</td><td class="num ora">−18 %</td></tr>
-    <tr><td>2039</td><td class="num">—</td><td class="num">25 844</td><td class="num">16 052</td><td class="num red">−29 %</td></tr>
+    <tr><td>1999</td><td class="num">73 266</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>
+    <tr><td>2024</td><td class="num">36 188</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>
+    <tr><td>2029</td><td class="num">—</td><td class="num">33 966</td><td class="num">30 858 – 37 388</td><td class="num">30 689</td><td class="num">28 122</td></tr>
+    <tr><td>2034</td><td class="num">—</td><td class="num">29 628</td><td class="num">26 917 – 32 612</td><td class="num">23 370</td><td class="num">21 853</td></tr>
+    <tr><td>2039</td><td class="num">—</td><td class="num">25 844</td><td class="num">23 479 – 28 447</td><td class="num">16 052</td><td class="num">16 982</td></tr>
   </tbody>
 </table>
 
 <div class="box warn">
-  <strong>Divergence modelů</strong>
-  V roce 2029 se oba modely shodují (rozdíl ~10 %). Do roku 2039 se rozcházejí o 10 000 účastníků. Exponenciální model předpokládá, že rychlost poklesu se postupně zpomaluje — jako demograficky přirozenější je vhodnější pro dlouhodobou projekci. Lineární model je pesimističtější a vede v delším horizontu k nerealistickým hodnotám.
+  <strong>Rozcházejí se modely</strong>
+  Exp model očekává pokles na 25 844 (−29 % vs. 2024). Lineární a recent shodně předpovídají kolem 16 000–17 000 (−54 %). Realističtější je střed mezi exp a recent, neboť exp model přestřeluje (viz sekce 5).
 </div>
 
 <figure class="chart">
   <img src="grafy/dekanaty_srovnani_2039.png" alt="Srovnání děkanátů 2024 vs 2039">
-  <figcaption>Graf 4: Srovnání skutečnosti 2024 s prognózou 2039 podle děkanátů</figcaption>
+  <figcaption>Graf 4: Srovnání skutečnosti 2024 s prognózami 2039 podle všech tří modelů</figcaption>
 </figure>
 
 <!-- ═══════════════════════════════════════════════════════════ -->
-<h2 id="knezi">5. Kněží v diecézi</h2>
+<h2 id="validace">5. Validace predikčního modelu</h2>
+
+<p>Pro otestování predikčních modelů byla provedena <strong>leave-2024-out validace</strong>: modely byly fitovány pouze na roky 1999–2019 a předpovídali rok 2024. Pak se porovnaly se skutečností.</p>
+
+<table>
+  <thead>
+    <tr><th>Model</th><th class="num">Predikce 2024</th><th class="num">Skutečnost</th><th class="num">Chyba</th><th class="num">90 % CI</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Exp</td>    <td class="num">42 209</td><td class="num">36 188</td><td class="num red">+16,6 %</td><td class="num">40 317 – 44 190 (✗ mimo)</td></tr>
+    <tr><td>Lin</td>    <td class="num">40 008</td><td class="num">36 188</td><td class="num ora">+10,6 %</td><td class="num">—</td></tr>
+    <tr><td>Recent (2)</td><td class="num">41 089</td><td class="num">36 188</td><td class="num ora">+13,5 %</td><td class="num">—</td></tr>
+  </tbody>
+</table>
+
+<div class="box danger">
+  <strong>Klíčové zjištění validace</strong>
+  Všechny tři modely <strong>přestřelují skutečnost</strong> v roce 2024 o 10–17 %. To znamená: pozorovaný pokles je <em>rychlejší</em>, než modely fittnuté na 1999–2019 dokázaly extrapolovat. Také 90 % CI exp modelu nepojme skutečnou hodnotu — interval je příliš úzký.
+  <br><br>
+  <strong>Důsledek pro prognózu 2039:</strong> Bodové predikce (zejména exp) mohou být <em>příliš optimistické</em> — skutečnost bude pravděpodobně blíže recent/lin modelu (≈ 17 000 osob). CI exp by se mělo interpretovat jen jako spodní hranice nejistoty.
+</div>
+
+<p>Na úrovni farností je MAPE pro exp model 43,9 %, vážený MAPE 24,9 %, RMSE 59. Pro horizont 2039 (15 let) lze chybu očekávat ještě vyšší.</p>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h2 id="knezi">6. Kněží v diecézi</h2>
 
 <div class="kpi-row">
   <div class="kpi blue">
-    <div class="num">198</div>
-    <div class="lbl">Kněží celkem (2024/25)</div>
+    <div class="num">186</div>
+    <div class="lbl">Aktivních kněží (2025)</div>
   </div>
   <div class="kpi orange">
     <div class="num">131</div>
-    <div class="lbl">Farářů<br>(1 farnost)</div>
+    <div class="lbl">Farářů<br>(vlastní farnost)</div>
   </div>
   <div class="kpi red">
     <div class="num">135</div>
-    <div class="lbl">Farností bez vlastního faráře<br>(administrátor excurrendo)</div>
+    <div class="lbl">Farností bez vlastního faráře<br>(adm. excurrendo)</div>
   </div>
   <div class="kpi orange">
-    <div class="num">1,45</div>
-    <div class="lbl">Průměr farností<br>na kněze (2024)</div>
+    <div class="num">1,49</div>
+    <div class="lbl">Průměrný počet<br>farností na aktivního kněze</div>
   </div>
 </div>
 
-<p>Z celkového počtu 278 farností má <strong>131 vlastního faráře</strong>. Zbývajících 135 spravuje kněz excurrendo — tedy z jiné farnosti. Někteří kněží pokrývají až 7 farností. Historická data ukazují, že počet kněží byl v diecézi relativně stabilní (202–227 v letech 1999–2019), ale od roku 2019 začíná klesat.</p>
+<p>Z celkového počtu 277 farností má <strong>131 vlastního faráře</strong>. Zbývajících 135 spravuje kněz excurrendo. Někteří kněží pokrývají až 7 farností. Pojem „aktivní kněz" zahrnuje 11 rolí schopných celebrovat nedělní mši (faráři, administrátoři vč. excurrendo, farní vikáři, výpomocní duchovní, rektoři kostelů).</p>
 
 <table>
   <thead>
@@ -297,14 +343,21 @@
 </table>
 
 <div class="box info">
-  <strong>Klíčové zjištění</strong>
-  Více než polovina farností (49 %) již nyní nemá vlastního faráře a je spravována excurrendo. Tento model je normou — avšak má fyzické limity. Při poklesu kněží na polovinu (na ~96) by průměrná zátěž vzrostla z 1,45 na 2,9 farností na kněze.
+  <strong>Geografická nerovnoměrnost</strong>
+  Současné rozdělení kněží je výrazně nerovnoměrné:
+  <br>– <strong>Frýdek</strong>: 19 farností / 24 aktivních kněží = 0,8 far./kněz
+  <br>– <strong>Hlučín</strong>: 22 farností / 21 kněží = 1,05 far./kněz
+  <br>– <strong>Bruntál</strong>: 33 farností / 9 kněží = <strong>3,67 far./kněz</strong>
+  <br>– <strong>Krnov</strong>: 27 farností / 7 kněží = <strong>3,86 far./kněz</strong>
+  <br>– <strong>Jeseník</strong>: 28 farností / 9 kněží = <strong>3,11 far./kněz</strong>
+  <br><br>
+  V periferních děkanátech (Bruntál, Krnov, Jeseník) už dnes systém funguje nad limit 2 farnosti/kněz. Tento strukturální nedostatek je nezávislý na demografickém poklesu kněží.
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════ -->
-<h2 id="kapacita">6. Kapacitní model</h2>
+<h2 id="kapacita">7. Kapacitní model</h2>
 
-<p>Model simuluje pokrytí farností při exponenciálním poklesu počtu kněží o 50 % za 10 let. Každý kněz je schopen pravidelně sloužit nedělní mši ve <strong>max. 2 farnostech</strong>. Přidělení probíhá prioritou od největší farnosti.</p>
+<p>Model simuluje pokrytí farností při exponenciálním poklesu kněží o 50 % za 10 let, s geografickou alokací (kapacita kněží proporčně k dnešnímu stavu po děkanátech). Hlavní scénář: max. <strong>2 farnosti/kněz</strong>.</p>
 
 <table>
   <thead>
@@ -318,105 +371,117 @@
     </tr>
   </thead>
   <tbody>
-    <tr><td>2024</td><td class="num">192</td><td class="num">384</td><td class="num">277</td><td class="num grn">0</td>  <td class="num">0</td></tr>
-    <tr><td>2027</td><td class="num">156</td><td class="num">312</td><td class="num">277</td><td class="num grn">0</td>  <td class="num">0</td></tr>
-    <tr><td>2029</td><td class="num">136</td><td class="num">272</td><td class="num">272</td><td class="num ora">2</td>  <td class="num">~2</td></tr>
-    <tr><td>2031</td><td class="num">118</td><td class="num">236</td><td class="num">236</td><td class="num ora">38</td> <td class="num">157</td></tr>
-    <tr><td>2034</td><td class="num">96</td> <td class="num">192</td><td class="num">192</td><td class="num red">82</td> <td class="num">796</td></tr>
-    <tr><td>2037</td><td class="num">78</td> <td class="num">156</td><td class="num">156</td><td class="num red">118</td><td class="num">1 782</td></tr>
-    <tr><td>2039</td><td class="num">68</td> <td class="num">136</td><td class="num">136</td><td class="num red">138</td><td class="num">2 445</td></tr>
+    <tr><td>2024</td><td class="num">186</td><td class="num">372</td><td class="num">247</td><td class="num ora">30</td>  <td class="num">82</td></tr>
+    <tr><td>2027</td><td class="num">151</td><td class="num">302</td><td class="num">229</td><td class="num ora">48</td>  <td class="num">329</td></tr>
+    <tr><td>2029</td><td class="num">132</td><td class="num">264</td><td class="num">213</td><td class="num ora">64</td>  <td class="num">613</td></tr>
+    <tr><td>2031</td><td class="num">114</td><td class="num">228</td><td class="num">197</td><td class="num ora">80</td>  <td class="num">977</td></tr>
+    <tr><td>2034</td><td class="num">93</td> <td class="num">186</td><td class="num">172</td><td class="num red">105</td> <td class="num">1 663</td></tr>
+    <tr><td>2037</td><td class="num">76</td> <td class="num">152</td><td class="num">148</td><td class="num red">129</td> <td class="num">2 659</td></tr>
+    <tr><td>2039</td><td class="num">66</td> <td class="num">132</td><td class="num">132</td><td class="num red">145</td> <td class="num">3 243</td></tr>
   </tbody>
 </table>
 
+<div class="box warn">
+  <strong>Kritický rok je už dnes</strong>
+  Při limitu 2 farnosti/kněz je v 2024 strukturálně ohroženo <strong>30 farností</strong> (10,8 %) — všechny v Bruntálsku, Krnovsku a Jesenicku. Geografické přidělení odhalilo, že problém začíná v periferiích, ne v 2031 jako udávala první analýza.
+  <br><br>
+  Při limitu 3 farnosti/kněz (realističtější dle dnešní praxe) se situace v 2024 stabilizuje, ale do 2034 se situace zhorší výrazně.
+</div>
+
 <figure class="chart">
   <img src="grafy/kapacitni_model.png" alt="Kapacitní model">
-  <figcaption>Graf 5: Kapacitní model — kněží, pokrytí farností a věřící v ohrožených farnostech</figcaption>
+  <figcaption>Graf 5: Hlavní scénář (base, max 2 farnosti/kněz)</figcaption>
 </figure>
 
 <figure class="chart">
   <img src="grafy/kapacita_dekanaty_2034.png" alt="Ohrožené farnosti podle děkanátů 2034">
-  <figcaption>Graf 6: Pokrytí farností podle děkanátů ve scénáři 2034 (96 kněží)</figcaption>
+  <figcaption>Graf 6: Pokrytí podle děkanátu ve scénáři 2034</figcaption>
 </figure>
 
-<h3>Interaktivní mapy</h3>
-<p>Následující mapy zobrazují všechny farnosti diecéze. <span style="color:#2563eb">●&nbsp;Modré</span> body jsou pokryté, <span style="color:#dc2626">●&nbsp;červené</span> ohrožené. Velikost bodu odpovídá počtu věřících. Kliknutím na bod se zobrazí detail farnosti.</p>
+<h3>7.1 Interaktivní mapy</h3>
+<p>Mapy zobrazují všechny farnosti s GPS. <span style="color:#2563eb">●&nbsp;Modré</span> jsou pokryté, <span style="color:#dc2626">●&nbsp;červené</span> ohrožené. Velikost odpovídá počtu věřících.</p>
 <ul>
-  <li><a href="grafy/mapa_ohrozenych_2034.html" target="_blank">🗺 Mapa — scénář 2034 (96 kněží, 82 ohrožených farností)</a></li>
-  <li><a href="grafy/mapa_ohrozenych_2037.html" target="_blank">🗺 Mapa — scénář 2037 (78 kněží, 118 ohrožených farností)</a></li>
-  <li><a href="grafy/mapa_ohrozenych_2039.html" target="_blank">🗺 Mapa — scénář 2039 (68 kněží, 138 ohrožených farností)</a></li>
+  <li><a href="grafy/mapa_ohrozenych_2034.html" target="_blank">🗺 Mapa — 2034 (93 kněží)</a></li>
+  <li><a href="grafy/mapa_ohrozenych_2037.html" target="_blank">🗺 Mapa — 2037 (76 kněží)</a></li>
+  <li><a href="grafy/mapa_ohrozenych_2039.html" target="_blank">🗺 Mapa — 2039 (66 kněží)</a></li>
 </ul>
-
-<h3>Geografické rozložení ohrožení</h3>
-<p>Nejohroženější jsou periferní děkanáty s mnoha malými venkovskými farnostmi:</p>
-<ul>
-  <li><strong>Bruntál</strong> — 26 ohrožených farností z 33 (scénář 2034)</li>
-  <li><strong>Krnov</strong> — 22 z 27</li>
-  <li><strong>Jeseník</strong> — 16 z 28</li>
-  <li><strong>Opava</strong> — 8 z 35</li>
-</ul>
-<p>Naopak děkanáty <strong>Frýdek, Hlučín, Místek a Ostrava</strong> zůstávají v modelu plně pokryty až do roku 2039 — jsou to hustě osídlené oblasti s větším průměrným počtem věřících na farnost.</p>
-
-<div class="box warn">
-  <strong>Paradox souběhu poklesů</strong>
-  Nejmenší farnosti, které jako první ztratí kněze, mají zároveň nejméně věřících — v roce 2034 žije v ohrožených 82 farnostech pouze 796 věřících (2,6 % celku). Tlak na slučování je tedy především geografický, nikoli pastorálně-numerický.
-</div>
 
 <!-- ═══════════════════════════════════════════════════════════ -->
-<h2 id="dopady">7. Dopady a scénáře reakce</h2>
+<h2 id="citlivost">8. Citlivostní analýza</h2>
 
-<h3>7.1 Hlavní identifikované dopady</h3>
+<p>Hlavní výsledky zásadně závisí na dvou nejistých parametrech: tempu poklesu kněží a praktickém limitu farností na kněze. Tabulka ukazuje rok, kdy v daném scénáři poprvé vznikají ohrožené farnosti:</p>
 
-<p><strong>Pokles věřících</strong> je systematický a probíhá ve všech děkanátech bez výjimky. Není to lokální jev — jde o strukturální demografický a kulturní posun. Tempa se liší, ale směr je jednotný: diecéze ztratila za 25 let každého druhého pravidelného účastníka bohoslužeb. Při zachování trendu klesne do roku 2039 návštěvnost na 25 000–34 000 osob (podle modelu).</p>
+<table>
+  <thead>
+    <tr>
+      <th>Pokles kněží</th>
+      <th class="num">Max 2 far./kněz</th>
+      <th class="num">Max 3 far./kněz</th>
+      <th class="num">Max 4 far./kněz</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>Mild (−30 %/10 let)</td>   <td class="num">2024</td><td class="num">~stabilní</td><td class="num">~stabilní</td></tr>
+    <tr><td>Base (−50 %/10 let)</td>   <td class="num">2024</td><td class="num">2024</td><td class="num">2024</td></tr>
+    <tr><td>Severe (−65 %/10 let)</td> <td class="num">2024</td><td class="num">2024</td><td class="num">2024</td></tr>
+  </tbody>
+</table>
 
-<p><strong>Pokles kněží</strong> vytváří sekundární tlak. Již dnes 49 % farností nemá vlastního faráře. Při poklesu kněží na 96 (scénář 2034) by bez pravidelné nedělní mše zůstalo 82 farností. Kritický práh nastane kolem roku 2031, kdy kapacita kněží poprvé nestačí pokrýt všechny farnosti ani při limitu 2 farnosti/kněz.</p>
+<p><em>Pozn.:</em> všechna „2024" znamenají, že v některých periferních děkanátech (Bruntál, Krnov, Jeseník) už dnes existují farnosti přes limit. Velikost problému roste s časem.</p>
 
-<p><strong>Geografická periferizace</strong>: nejvíce postiženy jsou horské a příhraniční oblasti — Bruntálsko, Krnovsko, Jesenicko. Tyto regiony trpí zároveň celkovým demografickým úbytkem obyvatel, vylidňováním obcí a nižší ekonomickou aktivitou.</p>
+<figure class="chart">
+  <img src="grafy/citlivost.png" alt="Citlivostní analýza">
+  <figcaption>Graf 7: % ohrožených farností v čase pro tři scénáře poklesu a tři limity</figcaption>
+</figure>
 
-<p><strong>Věkové stárnutí komunity</strong>: průměrný věk účastníků bohoslužeb v diecézi stoupl z ~44 let (1999) na ~47 let (2024). Bez přílivu mladších věřících bude přirozený úbytek stávající komunity pokračovat i bez dalšího odlivu.</p>
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h2 id="dopady">9. Dopady a scénáře reakce</h2>
 
-<h3>7.2 Scénáře reakce</h3>
+<h3>9.1 Hlavní zjištění</h3>
+
+<p><strong>Pokles věřících</strong> probíhá ve všech děkanátech bez výjimky a po roce 2019 akceleruje. Predikce 2039 je v rozmezí 17 000 (lin/recent) až 26 000 (exp); střed odhadu cca <strong>20 000–22 000 osob</strong> (−40 až −45 % vs. 2024).</p>
+
+<p><strong>Personální problém</strong> je strukturální a geografický. V periferních děkanátech (Bruntálsko, Krnovsko, Jesenicko) už dnes 1 kněz spravuje 3–4 farnosti. Demografický pokles počtu kněží tuto disproporci dále zhorší — model „kritický rok 2031" z první analýzy podhodnocoval geografickou koncentraci problému.</p>
+
+<p><strong>Stárnutí komunity</strong>: vážený průměr věku stoupl z <strong>45,3 let (1999)</strong> na <strong>48,8 let (2024)</strong> — tj. +3,5 roku za 25 let, kdy přirozená biologická obměna by měla vést k poklesu, kdyby přicházeli mladí.</p>
+
+<h3>9.2 Scénáře reakce</h3>
 
 <div class="scenarios">
   <div class="scenario s1">
-    <h4>✦ Scénář A — Konsolidace farní struktury</h4>
-    <p>Proaktivní slučování malých farností do větších pastoračních celků. Místo 278 kanonicky samostatných farností přechod na ~80–100 pastoračních oblastí. Kněz spravuje celek, bohoslužby rotují mezi kostely.</p>
-    <p><strong>Výhoda:</strong> udržitelné i při 96 kněžích, zachovává přítomnost v regionech.</p>
-    <p><strong>Riziko:</strong> ztráta lokální identity, odpor místních komunit, nutnost kanonických změn.</p>
+    <h4>Scénář A — Konsolidace farní struktury</h4>
+    <p>Slučování farností do pastoračních celků (např. místo 277 farností 80–100 celků). Kněz spravuje celek, bohoslužby rotují.</p>
+    <p><strong>Výhoda:</strong> udržitelné i při 90 kněžích; zachovává regionální přítomnost.</p>
+    <p><strong>Riziko:</strong> ztráta lokální identity, kanonické změny.</p>
   </div>
   <div class="scenario s2">
-    <h4>✦ Scénář B — Posílení laické služby</h4>
-    <p>Systematické vzdělávání a pověřování laiků (jáhnů, pastoračních asistentů, vedoucích společenství) k vedení liturgie slova, pohřbů, návštěv nemocných a katecheze. Kněz zajišťuje eucharistii, laici komunitu.</p>
-    <p><strong>Výhoda:</strong> nezávisí na počtu kněží, buduje odolnější místní komunitu.</p>
-    <p><strong>Riziko:</strong> vyžaduje změnu kultury farnosti, teologické napětí, dlouhodobou přípravu.</p>
+    <h4>Scénář B — Posílení laické služby</h4>
+    <p>Systematické vzdělávání laiků pro liturgii slova, pohřby, katechezi. Kněz zajišťuje eucharistii.</p>
+    <p><strong>Výhoda:</strong> nezávisí na počtu kněží; buduje místní komunitu.</p>
+    <p><strong>Riziko:</strong> kulturní změna, teologické napětí.</p>
   </div>
   <div class="scenario s3">
-    <h4>✦ Scénář C — Selektivní uzavírání kostelů</h4>
-    <p>Při zachování stávající struktury a přirozeném poklesu kněží bude část kostelů de facto bez pravidelné bohoslužby. Farnosti formálně existují, ale mše jsou jednou za měsíc nebo méně.</p>
+    <h4>Scénář C — Pasivní vyhasínání</h4>
+    <p>Při zachování stávající struktury část kostelů ztratí pravidelnou bohoslužbu. Farnosti formálně existují, ale mše jednou za měsíc.</p>
     <p><strong>Výhoda:</strong> nevyžaduje aktivní rozhodnutí.</p>
-    <p><strong>Riziko:</strong> nekontrolovaný, neřízený zánik. Věřící odcházejí, budovy chátrají, komunita se rozpadá bez plánu.</p>
+    <p><strong>Riziko:</strong> neřízený zánik, ztráta věřících i budov.</p>
   </div>
 </div>
 
-<h3>7.3 Kombinovaná doporučení</h3>
-<p>Analýza naznačuje, že žádný jediný scénář není dostatečný. Nejpragmatičtějším přístupem je kombinace:</p>
+<h3>9.3 Doporučení</h3>
 <ol>
-  <li><strong>Okamžitě:</strong> mapování farností s méně než 30 věřícími a zahájení dialogu o jejich budoucnosti (týká se cca 40 farností dnes).</li>
-  <li><strong>Do 5 let:</strong> pilotní program pastoračních celků v děkanátech Bruntál a Krnov, kde je tlak nejsilnější a počet malých farností nejvyšší.</li>
-  <li><strong>Průběžně:</strong> investice do laického vzdělávání — jáhni, pastorační asistenti, animátoři společenství — jako strukturální odpověď na pokles kněží.</li>
-  <li><strong>Datově:</strong> opakovat tuto analýzu po sčítání 2029 a aktualizovat kapacitní model podle skutečného vývoje počtu kněží.</li>
+  <li><strong>Okamžitě:</strong> mapování farností s &lt; 30 věřícími (cca 40 farností). Dialog o jejich budoucnosti.</li>
+  <li><strong>Do 5 let:</strong> pilotní pastorační celky v Bruntálsku a Krnovsku — tlak je zde nejsilnější už dnes.</li>
+  <li><strong>Průběžně:</strong> investice do laického vzdělávání (jáhni, asistenti, animátoři).</li>
+  <li><strong>Datově:</strong> opakovat analýzu po sčítání 2029; aktualizovat <code>dieceze_statistiky</code> o roky 2020–2024 (počty kněží) a fitnout pokles kněží z dat.</li>
 </ol>
 
-<div class="box danger">
-  <strong>Kritické okno: 2029–2034</strong>
-  Pokud nedojde ke strukturálním změnám, toto je období kdy diecéze přejde z „zvladatelného napětí" do „systémové krize pokrytí". Kapacitní model ukazuje, že kolem roku 2031 kapacita kněží poprvé nestačí. Příprava a rozhodnutí jsou potřebná <em>před</em> tímto prahem, ne po něm.
-</div>
-
-<h3>7.4 Poznámka k farnosti Lubina</h3>
-<p>Farnost Lubina je v kontextu děkanátu Nový Jičín <strong>nadprůměrně stabilní</strong>: pokles −28 % za 25 let oproti průměru děkanátu −52 %. Průměrný věk věřících (38,9 let v 2024) je jeden z nejnižších v děkanátu. Kapacitní model ukazuje, že Lubina zůstane pokryta i v nejhorším scénáři 2039. Stabilita farnosti může sloužit jako referenční příklad pro analýzu faktorů odolnosti — co Lubina dělá jinak?</p>
+<h3>9.4 Poznámka k farnosti Lubina</h3>
+<p>Lubina patří v děkanátu Nový Jičín mezi <strong>nadprůměrně stabilní</strong> (−28 % za 25 let oproti průměru −52 %). Vážený průměrný věk 38,9 let v 2024 patří k nejnižším v děkanátu. Kapacitní model ukazuje, že Lubina zůstává pokryta ve všech scénářích — důsledek vyšší aktivity, ne jen velikosti.</p>
 
 <footer>
-  <p>Zpracováno pomocí Claude Code (Anthropic) · Květen 2026</p>
-  <p>Databáze: <code>scitani.db</code> · Grafy: adresář <code>grafy/</code> · Skripty: <code>import_csv_to_sqlite.py</code>, <code>scrape_knezi.py</code>, <code>predikce.py</code>, <code>kapacitni_model.py</code>, <code>grafy.py</code></p>
+  <p>Zpracováno pomocí Claude Code (Anthropic) · květen 2026 · verze 2 (po validačním reportu)</p>
+  <p>Databáze: <code>scitani.db</code> · Grafy: <code>grafy/</code> · Skripty: <code>import_csv_to_sqlite.py</code>, <code>scrape_knezi.py</code>, <code>predikce.py</code>, <code>kapacitni_model.py</code>, <code>validace_predikce.py</code>, <code>grafy.py</code>, <code>mapa_ohrozenych.py</code></p>
 </footer>
 
 </body>
