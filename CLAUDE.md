@@ -63,5 +63,5 @@ zdrojového CSV jako `osob_celkem=238`, `muz=110`, `zena=128`.
 
 ## Výstupy
 
-- `report.html` + `grafy/` — nasadit na web jako `statistika_web.zip` (rozbalit do `public_html/statistika/`)
-- Report dostupný na `farnost.lubina.cz/statistika/report.html`
+- `report.html` + `grafy/` — nasadit přes FTP na `4469.w69.wedos.net`, cesta `static/doo_statistika/`
+- Report dostupný na `farnost.lubina.cz/static/doo_statistika/report.html`
