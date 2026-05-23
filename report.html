@@ -270,6 +270,17 @@
   Exp model očekává pokles na 25 848 (−29 % vs. 2024). Lineární, recent a Holt shodně předpovídají kolem 16 000–17 000 (−54 %). Realističtější je střed mezi exp a ostatními modely, neboť exp model přestřeluje (viz sekce 5).
 </div>
 
+<div class="box info">
+  <strong>Proč může být predikce 2029 vyšší než skutečnost 2024?</strong>
+  U některých děkanátů (např. Jeseník) tabulka ukazuje HNB predikci 2029 vyšší než skutečně naměřenou hodnotu 2024. To není chyba — je to vlastnost statistického modelu. Tři důvody:
+  <ul style="margin:.6em 0 .3em 1.4em">
+    <li><strong>Hluk vs. trend.</strong> Model nepovažuje každý rok za dokonalé měření. Roky s neobvykle nízkým číslem (nemoc, nepřízeň počasí, jednorázový organizační výpadek) model „vyhlazuje" — pracuje s tím, co považuje za skutečný dlouhodobý trend, ne s posledním naměřeným bodem.</li>
+    <li><strong>Průměrování přes skupinu.</strong> Malé farnosti s prudkým poklesem se v modelu „přitahují" k průměru děkanátu. Model říká: <em>„Tak strmý pád je pro malou farnost statisticky nepravděpodobný — spíše jde o výkyv."</em> Výsledek je konzervativnější predikce poklesu, než by naznačovalo posledních pět let.</li>
+    <li><strong>Nulové farnosti.</strong> Farnosti, kde v roce 2024 nebyla žádná účast, stále dostávají nenulovou predikci — model jim přisuzuje malý zbytkový trend na základě starší historie.</li>
+  </ul>
+  Toto chování model potvrdila validace (sekce 5): HNB nadhodnotil diecézní součet o 20,7 % i ve zpětném testu. Predikce HNB je proto horní odhad — skutečnost bude pravděpodobně nižší.
+</div>
+
 <figure class="chart">
   <img src="grafy/dekanaty_srovnani_2039.png" alt="Srovnání děkanátů 2024 vs 2039">
   <figcaption>Graf 4: Srovnání skutečnosti 2024 s prognózami 2039 podle všech čtyř modelů</figcaption>
