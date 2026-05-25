@@ -7,7 +7,7 @@
 Analýza zpracovává výsledky celostátního sčítání ČBK z let 1999–2024 pro všech 277 farností Diecéze ostravsko-opavské. Zahrnuje:
 
 - historický vývoj návštěvnosti bohoslužeb po farnostech a děkanátech (1999–2024),
-- predikce do roku 2039 třemi modely (exponenciální, lineární, recent),
+- predikce do roku 2039 vybranými modely (exponenciální, recent, Holt),
 - leave-2024-out validaci přesnosti predikcí včetně segmentovaných metrik,
 - kapacitní model — kolik farností ztratí pravidelnou pastorační péči při poklesu počtu kněží,
 - citlivostní analýzu pro různá tempa poklesu a limity farností na kněze,

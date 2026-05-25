@@ -15,7 +15,8 @@ Analýza návštěvnosti nedělních bohoslužeb v Diecézi ostravsko-opavské n
 | `import_csv_to_sqlite.py` | Import CSV → tabulka `scitani` + volitelné corrigenda |
 | `scrape_knezi.py` | Scraping kněží z doo.cz/katalog/farnosti/ (BS4, retry, dedup) |
 | `scrape_souradnice.py` | Scraping GPS souřadnic farností (s manuálním override) |
-| `predikce.py` | 3 modely predikce (exp + lin + recent), 90% CI, validita |
+| `predikce.py` | OLS/reference modely (exp + lin + recent + Holt), 90% CI, validita |
+| `predikce_hnb.py` | Hierarchický negativně binomický model (HNB) jako doplňková kontrola |
 | `validace_predikce.py` | Leave-2024-out validace, MAPE/RMSE/bias |
 | `kapacitni_model.py` | Geografický kapacitní model + citlivostní analýza |
 | `grafy.py` | Generování PNG grafů |
@@ -37,11 +38,11 @@ Analýza návštěvnosti nedělních bohoslužeb v Diecézi ostravsko-opavské n
 | `dieceze_statistiky` | Celodiecézní statistiky z Wikipedie (1999–2019) | rok, obyvatele, katolici, knezi, jahni, krty |
 | `knezi` | Kněží přiřazení k farnostem (scraping 2025) | farnost, guid, role, jmeno |
 | `farnosti_souradnice` | GPS souřadnice 277/277 farností (zdroj: 'web' / 'manual') | farnost, guid, lat, lon, zdroj |
-| `predikce_dieceze` | Predikce diecéze + 90% CI | rok, hodnota, exp_val, exp_lo, exp_hi, lin_val, recent_val |
-| `predikce_dekanat` | Predikce 11 děkanátů | dekanat, rok, hodnota, exp_val, exp_lo, exp_hi, lin_val, recent_val, r2_exp_log, r2_lin, validni |
-| `predikce_farnost` | Predikce 277 farností | farnost, rok, hodnota, exp_val, exp_lo, exp_hi, lin_val, recent_val, r2_exp_log, r2_lin, validni |
-| `predikce_farnost_model` | Parametry modelu (1 řádek/farnost) | exp_a, exp_b, sigma_log, lin_a, lin_b, recent_a, recent_b, validni, duvod_invaliditn |
-| `kapacitni_model` | Hlavní scénář pokrytí | rok, farnost, vericich, pocet_knezi, stav, scenar, max_far_knez |
+| `predikce_dieceze` | Predikce diecéze + 90% CI | rok, hodnota, exp_val, exp_lo, exp_hi, lin_val, recent_val, holt_val, hnb_val |
+| `predikce_dekanat` | Predikce 11 děkanátů | dekanat, rok, hodnota, exp_val, exp_lo, exp_hi, lin_val, recent_val, holt_val, hnb_val, r2_exp_log, r2_lin, validni |
+| `predikce_farnost` | Predikce 277 farností | farnost, rok, hodnota, exp_val, exp_lo, exp_hi, lin_val, recent_val, holt_val, hnb_val, r2_exp_log, r2_lin, validni |
+| `predikce_farnost_model` | Parametry modelu (1 řádek/farnost) | exp_a, exp_b, sigma_log, lin_a, lin_b, recent_a, recent_b, holt_*, validni, zero_count, last_value, model_type |
+| `kapacitni_model` | Hlavní scénář pokrytí | rok, farnost, vericich, pocet_knezi, stav, scenar, max_far_knez, vericich_zdroj, predikce_validni |
 | `citlivost_scenare` | 9 scénářů (3 poklesy × 3 limity) | scenar, max_far_knez, rok, knezi, kapacita, pokryte, ohrozene |
 
 ---
@@ -55,6 +56,10 @@ ROKY_PREDIKCE   = [2029, 2034, 2039]
 MIN_BODY = 4         # min. počet nenulových pozorování pro validní fit
 R2_PRAH  = 0.5       # min. R² v log prostoru pro validni=1
 CI_Z     = 1.645     # 90% predikční interval
+
+# grafy.py / report.html
+# Hlavní grafy zobrazují jen vybranou trojici: exp + recent + Holt.
+# Lineární model a HNB zůstávají jako metodická kontrola a komentář.
 
 # kapacitni_model.py
 AKTIVNI_ROLE = (Farář, Administrátor*, Farní vikář, Výpomocný duchovní, Rektor*)
@@ -97,14 +102,15 @@ pip install -r requirements.txt --break-system-packages
 python3 import_csv_to_sqlite.py   # CSV → tabulka scitani (+ volitelná corrigenda)
 python3 scrape_knezi.py           # doo.cz → tabulka knezi
 python3 scrape_souradnice.py      # doo.cz → tabulka farnosti_souradnice
-python3 predikce.py               # → tabulky predikce_*
+python3 predikce.py               # → tabulky predikce_* (exp/lin/recent/Holt)
+python3 predikce_hnb.py           # → hnb_val/hnb_lo/hnb_hi (doplňkový HNB)
 python3 validace_predikce.py      # leave-2024-out přesnost
 python3 kapacitni_model.py        # → tabulka kapacitni_model + citlivost_scenare
 python3 grafy.py                  # → grafy/*.png
 python3 mapa_ohrozenych.py        # → grafy/mapa_*.html
 
 # Jen přepočet predikcí a výstupů (bez scrapingu):
-python3 predikce.py && python3 validace_predikce.py && \
+python3 predikce.py && python3 predikce_hnb.py && python3 validace_predikce.py && \
 python3 kapacitni_model.py && python3 grafy.py && python3 mapa_ohrozenych.py
 ```
 
@@ -212,3 +218,4 @@ pip install -r requirements.txt --break-system-packages
 | 2026-05-21 | Prvotní analýza — data 1999–2024, predikce 2029–2039, kapacitní model, report |
 | 2026-05-22 | Validační report a verze 2 — opravy kritických a závažných nedostatků |
 | 2026-05-22 | Repo `lstefek/DOO_statistika` na GitHubu, veřejně |
+| 2026-05-25 | Verze 3 — Holt, HNB jako doplňková kontrola, grafy zúženy na exp/recent/Holt |

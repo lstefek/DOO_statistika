@@ -134,14 +134,13 @@
 <h2 id="metodika">2. Metodika analýzy</h2>
 
 <h3>2.1 Predikční modely</h3>
-<p>Pro každou entitu (farnost, děkanát, diecéze) jsou fitovány modely na historických datech 1999–2024. <strong>Centrálním modelem</strong> pro kapacitní analýzu je hierarchický NB model (HNB). Ostatní modely slouží jako referenční srovnání.</p>
+<p>Pro každou entitu (farnost, děkanát, diecéze) jsou fitovány modely na historických datech 1999–2024. V hlavních grafech a prognostické tabulce jsou zobrazeny tři vybrané scénáře: exp, recent a Holt. Lineární model a HNB zůstávají v analýze jako metodická kontrola a validační komentář, ale nejsou vykreslovány jako samostatné hlavní scénáře.</p>
 <ul>
   <li><strong>Exponenciální pokles</strong> — <code>y = a · e<sup>b·t</sup></code>, OLS na log(y) (pouze body y &gt; 0). Demograficky přirozený model konstantního relativního tempa.</li>
-  <li><strong>Lineární regrese</strong> — <code>y = a + b·t</code>. Pro delší horizont vede k záporným hodnotám (clipované na 0).</li>
   <li><strong>Recent (lokální tempo)</strong> — exp model fitnutý jen z posledních dvou bodů (2019, 2024). Reaguje na akceleraci posledních let.</li>
   <li><strong>Holt (tlumené exponenciální vyrovnání)</strong> — Holtovo dvouparametrické vyrovnání s tlumeným trendem (<code>damped_trend=True</code>, optimalizováno přes MLE). Adaptivní váhování historických dat; tlumení zabraňuje přílišné extrapolaci. V leave-2024-out validaci dosahuje podobné přesnosti jako lin model (wMAPE ≈ 26 %).</li>
-  <li><strong>HNB ★ — Hierarchický negativně binomický model (centrální)</strong> — tříúrovňová hierarchie (diecéze → děkanát → farnost) s partial pooling. Intercept a slope každé farnosti jsou sdíleny přes děkanát; malé a extrémní farnosti se smrskují ke skupinovému průměru. NB rozdělení přirozeně zachycuje přesčasovou variabilitu i nulové hodnoty bez fallbacku. Posterior HDI je vypočítán z 1 000 NUTS vzorků (2 chains × 500 draws). Oproti OLS modelům: vyšší predikce (regularizace brání extrémnímu poklesu u malých farností), kapacitní model používá HNB pro všech 277 farností.</li>
 </ul>
+<p><strong>Další ověřené modely:</strong> lineární regrese slouží jako jednoduchý spodní referenční model. HNB je hierarchicky regularizovaná exponenciální varianta s partial poolingem; na agregátu se od exp modelu liší jen mírně a ve zpětné validaci přestřeluje diecézní součet nejvíce, proto není v grafech veden jako hlavní scénář.</p>
 
 <p><strong>Validita predikce</strong>: predikce je označena za neplatnou (<code>validni = 0</code>), pokud:</p>
 <ul>
@@ -162,11 +161,11 @@
   <li><strong>Max. farností na kněze</strong>: 3 scénáře (2, 3, 4).</li>
   <li><strong>Geografické přidělování</strong>: kapacita kněží se rozdělí mezi děkanáty podle dnešního stavu, pokrytí se počítá v rámci děkanátu (kněz z Frýdku nemůže sloužit v Jeseníku).</li>
 </ul>
-<p>V rámci děkanátu jsou farnosti přidělovány podle velikosti — nejprve největší. Kapacita kněží se rozděluje metodou největšího zbytku (přesný celkový součet). Predikce věřících pocházejí z HNB modelu pro všechny farnosti; výsledky jsou označeny sloupcem <code>vericich_zdroj</code>.</p>
+<p>V rámci děkanátu jsou farnosti přidělovány podle velikosti — nejprve největší. Kapacita kněží se rozděluje metodou největšího zbytku (přesný celkový součet). Zdroj farnostní predikce je v databázi označen sloupcem <code>vericich_zdroj</code>; hlavní prognostické grafy ale zobrazují jen vybrané modely exp/recent/Holt.</p>
 
 <div class="box info">
   <strong>Limitace modelu</strong>
-  Predikce extrapolují stávající trend. Nezachycují strukturální změny — slučování farností, evangelizační aktivity, migraci. Slouží jako scénář „co se stane, pokud se nic nezmění". Počty ohrožených farností jsou scénářový výsledek, nikoli předpověď. Jsou citlivé na definici aktivního kněze, fallback pro nevalidní farnosti a limit farností na kněze.
+  Predikce extrapolují stávající trend. Nezachycují strukturální změny — slučování farností, evangelizační aktivity, migraci. Slouží jako scénář „co se stane, pokud se nic nezmění". Počty ohrožených farností jsou scénářový výsledek, nikoli předpověď. Jsou citlivé na definici aktivního kněze, zdroj farnostní predikce, fallback pro nevalidní farnosti a limit farností na kněze.
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════ -->
@@ -196,7 +195,7 @@
 
 <figure class="chart">
   <img src="grafy/dieceze.png" alt="Vývoj návštěvnosti — diecéze">
-  <figcaption>Graf 1: Historický vývoj a čtyři modely predikce (exp s 90 % CI, lin, recent, Holt)</figcaption>
+  <figcaption>Graf 1: Historický vývoj a tři vybrané modely predikce (exp s 90 % CI, recent, Holt)</figcaption>
 </figure>
 
 <h3>3.2 Srovnání děkanátů</h3>
@@ -249,41 +248,32 @@
       <th class="num">Skutečnost</th>
       <th class="num">Exp model</th>
       <th class="num">90 % CI exp</th>
-      <th class="num">Lin model</th>
       <th class="num">Recent (lokální)</th>
       <th class="num">Holt (tlumený)</th>
-      <th class="num"><strong>HNB ★</strong></th>
-      <th class="num">90 % HDI HNB</th>
     </tr>
   </thead>
   <tbody>
-    <tr><td>1999</td><td class="num">73 266</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>
-    <tr><td>2024</td><td class="num">36 188</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>
-    <tr><td>2029</td><td class="num">—</td><td class="num">33 971</td><td class="num">28 657 – 40 271</td><td class="num">30 696</td><td class="num">28 122</td><td class="num">30 904</td><td class="num"><strong>35 161</strong></td><td class="num">34 050 – 36 291</td></tr>
-    <tr><td>2034</td><td class="num">—</td><td class="num">29 633</td><td class="num">24 510 – 35 827</td><td class="num">23 378</td><td class="num">21 853</td><td class="num">23 950</td><td class="num"><strong>31 233</strong></td><td class="num">30 016 – 32 481</td></tr>
-    <tr><td>2039</td><td class="num">—</td><td class="num">25 848</td><td class="num">20 913 – 31 948</td><td class="num">16 061</td><td class="num">16 982</td><td class="num">17 097</td><td class="num"><strong>27 863</strong></td><td class="num">26 591 – 29 233</td></tr>
+    <tr><td>1999</td><td class="num">73 266</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>
+    <tr><td>2024</td><td class="num">36 188</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>
+    <tr><td>2029</td><td class="num">—</td><td class="num">33 971</td><td class="num">28 657 – 40 271</td><td class="num">28 122</td><td class="num">30 904</td></tr>
+    <tr><td>2034</td><td class="num">—</td><td class="num">29 633</td><td class="num">24 510 – 35 827</td><td class="num">21 853</td><td class="num">23 950</td></tr>
+    <tr><td>2039</td><td class="num">—</td><td class="num">25 848</td><td class="num">20 913 – 31 948</td><td class="num">16 982</td><td class="num">17 097</td></tr>
   </tbody>
 </table>
 
 <div class="box warn">
   <strong>Rozcházejí se modely</strong>
-  Exp model očekává pokles na 25 848 (−29 % vs. 2024). Lineární, recent a Holt shodně předpovídají kolem 16 000–17 000 (−54 %). Realističtější je střed mezi exp a ostatními modely, neboť exp model přestřeluje (viz sekce 5).
+  Exp model očekává pokles na 25 848 (−29 % vs. 2024). Recent a Holt shodně předpovídají kolem 17 000 (−53 %). Realistický interval je proto spíš mezi recent/Holt a exp než jeden bodový odhad.
 </div>
 
 <div class="box info">
-  <strong>Proč může být predikce 2029 vyšší než skutečnost 2024?</strong>
-  U některých děkanátů (např. Jeseník) tabulka ukazuje HNB predikci 2029 vyšší než skutečně naměřenou hodnotu 2024. To není chyba — je to vlastnost statistického modelu. Tři důvody:
-  <ul style="margin:.6em 0 .3em 1.4em">
-    <li><strong>Hluk vs. trend.</strong> Model nepovažuje každý rok za dokonalé měření. Roky s neobvykle nízkým číslem (nemoc, nepřízeň počasí, jednorázový organizační výpadek) model „vyhlazuje" — pracuje s tím, co považuje za skutečný dlouhodobý trend, ne s posledním naměřeným bodem.</li>
-    <li><strong>Průměrování přes skupinu.</strong> Malé farnosti s prudkým poklesem se v modelu „přitahují" k průměru děkanátu. Model říká: <em>„Tak strmý pád je pro malou farnost statisticky nepravděpodobný — spíše jde o výkyv."</em> Výsledek je konzervativnější predikce poklesu, než by naznačovalo posledních pět let.</li>
-    <li><strong>Nulové farnosti.</strong> Farnosti, kde v roce 2024 nebyla žádná účast, stále dostávají nenulovou predikci — model jim přisuzuje malý zbytkový trend na základě starší historie.</li>
-  </ul>
-  Toto chování model potvrdila validace (sekce 5): HNB nadhodnotil diecézní součet o 20,7 % i ve zpětném testu. Predikce HNB je proto horní odhad — skutečnost bude pravděpodobně nižší.
+  <strong>Proč není HNB mezi hlavními scénáři?</strong>
+  HNB model je užitečný jako kontrola farnostní heterogenity a regularizace malých farností, ale agregovaně není zásadně odlišný od exp trendu: v roce 2039 dává 27 863 osob, tedy jen o 7,8 % více než exp model. Ve zpětném testu navíc nadhodnotil diecézní součet nejvíce (+20,7 %). Proto ho v hlavních grafech ponecháváme jen jako komentovaný referenční model, ne jako samostatný scénář vedle exp/recent/Holt.
 </div>
 
 <figure class="chart">
   <img src="grafy/dekanaty_srovnani_2039.png" alt="Srovnání děkanátů 2024 vs 2039">
-  <figcaption>Graf 4: Srovnání skutečnosti 2024 s prognózami 2039 podle všech čtyř modelů</figcaption>
+  <figcaption>Graf 4: Srovnání skutečnosti 2024 s prognózami 2039 podle tří vybraných modelů</figcaption>
 </figure>
 
 <!-- ═══════════════════════════════════════════════════════════ -->
@@ -297,23 +287,21 @@
   </thead>
   <tbody>
     <tr><td>Exp</td>    <td class="num">42 220</td><td class="num">36 188</td><td class="num red">+16,7 %</td><td class="num">38 395 – 46 427 (✗ mimo)</td></tr>
-    <tr><td>Lin</td>    <td class="num">40 022</td><td class="num">36 188</td><td class="num ora">+10,6 %</td><td class="num">—</td></tr>
     <tr><td>Recent (2)</td><td class="num">41 068</td><td class="num">36 188</td><td class="num ora">+13,5 %</td><td class="num">—</td></tr>
     <tr><td>Holt</td>   <td class="num">40 143</td><td class="num">36 188</td><td class="num ora">+10,9 %</td><td class="num">—</td></tr>
-    <tr><td><strong>HNB ★</strong></td><td class="num"><strong>43 668</strong></td><td class="num">36 188</td><td class="num red"><strong>+20,7 %</strong></td><td class="num">42 407 – 45 034 (✗ mimo)</td></tr>
   </tbody>
 </table>
 
 <div class="box danger">
   <strong>Klíčové zjištění validace</strong>
-  Všech pět modelů <strong>přestřeluje skutečnost</strong> v roce 2024 o 11–21 %. Pozorovaný pokles je <em>rychlejší</em>, než modely fittnuté na 1999–2019 dokázaly extrapolovat — zrychlení poklesu po roce 2019 je strukturální a nelze je zachytit parametrickou nejistotou.
+  Všechny tři hlavní modely <strong>přestřelují skutečnost</strong> v roce 2024 o 11–17 %. Pozorovaný pokles je <em>rychlejší</em>, než modely fittnuté na 1999–2019 dokázaly extrapolovat — zrychlení poklesu po roce 2019 je strukturální a nelze je zachytit parametrickou nejistotou.
   <br><br>
-  HNB ★ má <strong>nejvyšší chybu na diecézní úrovni (+20,7 %)</strong>, ale <strong>nejlepší MAPE na úrovni farností (42,2 %)</strong>. Důvod: partial pooling smršťuje farnosti k děkanátskému průměru — extrémní pokles malých farností je tlumený, takže součet přes diecézi je vyšší. CI modelu HNB 90 % HDI má coverage 59 % (horší než exp CI 76 %), protože posteriorní nejistota v μ nezahrnuje nepozorované strukturální zrychlení poklesu.
+  Referenčně byly ověřeny i lineární a HNB model. Lineární model je blízko Holtu (+10,6 % na diecézi v leave-2024-out), proto ho není nutné držet jako další grafickou řadu. HNB má <strong>nejvyšší chybu na diecézní úrovni (+20,7 %)</strong>, ale <strong>nejlepší MAPE na úrovni farností (42,2 %)</strong>; partial pooling tedy pomáhá jednotlivým farnostem, ale zvyšuje agregovaný odhad.
   <br><br>
-  <strong>Důsledek pro prognózu 2039:</strong> Všechny modely pravděpodobně přeceňují budoucí návštěvnost. HNB používáme jako centrální model pro kapacitní analýzu proto, že nejlépe zachycuje heterogenitu farností — ne proto, že má nejnižší agregátní chybu. CI slouží jako indikátor parametrické nejistoty, ne jako garance pokrytí.
+  <strong>Důsledek pro prognózu 2039:</strong> Všechny modely pravděpodobně přeceňují budoucí návštěvnost. CI slouží jako indikátor parametrické nejistoty, ne jako garance pokrytí.
 </div>
 
-<p>Na úrovni farností (leave-2024-out): MAPE exp 44,0 %, HNB 42,2 %; wMAPE exp 25,0 %, HNB 25,4 %; RMSE exp 59, HNB 60. Coverage 90 % CI: exp <strong>76 %</strong>, HNB <strong>59 %</strong>. Pro horizont 2039 (15 let) lze chybu očekávat výrazně vyšší.</p>
+<p>Na úrovni farností (leave-2024-out): MAPE exp 44,0 %, recent 77,6 %, Holt 49,0 %. HNB byl ověřen jako doplňkový model: MAPE 42,2 %, wMAPE 25,4 %, ale diecézní chyba +20,7 %. Coverage 90 % CI exp je <strong>76 %</strong>, tedy pod nominálními 90 %. Pro horizont 2039 (15 let) lze chybu očekávat výrazně vyšší.</p>
 
 <table>
   <thead>
@@ -328,7 +316,7 @@
     <tr><td>Velikost 2024 = 1–29</td>    <td class="num">76</td><td class="num red">65,2 %</td><td class="num red">55,0 %</td><td class="num">+5,5</td><td class="num">82 %</td></tr>
   </tbody>
 </table>
-<p><em>Poznámka: nevalidní predikce mají téměř 2× horší chybu než validní. Kapacitní model používá HNB pro všechny farnosti — i ty s nevalidním OLS modelem.</em></p>
+<p><em>Poznámka: nevalidní predikce mají téměř 2× horší chybu než validní. HNB byl použit jako doplňková kontrola heterogenity farností, ale v hlavních grafech není zobrazován.</em></p>
 
 <!-- ═══════════════════════════════════════════════════════════ -->
 <h2 id="knezi">6. Kněží v diecézi</h2>
@@ -467,7 +455,7 @@
 
 <h3>9.1 Hlavní zjištění</h3>
 
-<p><strong>Pokles věřících</strong> probíhá ve všech děkanátech bez výjimky. Pokles po roce 2019 zrychlil na úrovni diecéze a ve většině děkanátů — výjimkou jsou Místek a Bruntál, kde se relativní tempo mírně zmírnilo. Predikce 2039 je v rozmezí 17 000 (lin/recent) až 26 000 (exp); střed odhadu cca <strong>20 000–22 000 osob</strong> (−40 až −45 % vs. 2024).</p>
+<p><strong>Pokles věřících</strong> probíhá ve všech děkanátech bez výjimky. Pokles po roce 2019 zrychlil na úrovni diecéze a ve většině děkanátů — výjimkou jsou Místek a Bruntál, kde se relativní tempo mírně zmírnilo. Vybrané modely dávají pro rok 2039 rozpětí přibližně 17 000 (recent/Holt) až 26 000 (exp); střed odhadu cca <strong>20 000–22 000 osob</strong> (−40 až −45 % vs. 2024).</p>
 
 <p><strong>Personální problém</strong> je strukturální a geografický. V periferních děkanátech (Bruntálsko, Krnovsko, Jesenicko) už dnes 1 kněz spravuje 3–4 farnosti. Demografický pokles počtu kněží tuto disproporci dále zhorší — model „kritický rok 2031" z první analýzy podhodnocoval geografickou koncentraci problému.</p>
 
